@@ -1,0 +1,32 @@
+#!/usr/bin/env bash
+
+usage() {
+    cat <<EOF
+Fetch mappings from Entrez Gene IDs to Gene Ontology terms.
+USAGE: $0 -g <genome>
+EOF
+}
+
+while getopts hg: opt; do
+    case $opt in
+        h) usage && exit 0 ;;
+        g) genome=$OPTARG ;;
+        *) usage && exit 1 ;;
+    esac
+done
+shift $((OPTIND - 1))
+
+[ -z "$genome" ] && {
+    echo "ERROR: genome (-g) is required!"
+    exit 1
+}
+
+cat <<EOF |
+SELECT DISTINCT knownToLocusLink.value, goaPart.goId
+FROM kgXref
+INNER JOIN go.goaPart
+ON go.goaPart.dbObjectSymbol=kgXref.spDisplayID
+INNER JOIN knownToLocusLink
+ON knownToLocusLink.name=kgXref.kgID
+EOF
+hgsql $genome -N 

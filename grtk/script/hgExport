@@ -1,0 +1,98 @@
+#!/bin/bash
+
+usage() {
+    cat <<EOF
+Export tables from UCSC MySQL database to disk.
+USAGE: $0 [options] -g <genome> -o <outdir> <tables> ...
+
+Optional:
+    -h : export the tables in hierarchical format: '\$genome/\$group/\$visibility'
+
+If no tables are provided, all tables will be dumped.
+
+Requirements: 
+- Kent utilities installed
+- localDb configured in ~/.hg.conf (see: http://genomewiki.ucsc.edu/index.php/Hg.conf)
+EOF
+}
+
+#fetchRMSK() {
+#    hgsqlLocal -Ne "SELECT genoName,genoStart,genoEnd,\
+#        repClass,swScore,strand,swScore FROM $table" ;;
+#}
+
+# Fetch all but the first column (bin), in tab-delimited format
+fetchRows() {
+    hgsqlLocal $genome -Ne "SELECT * FROM $1" | cut -f2- 
+}
+export -f fetchRows
+
+exportTrack() {
+    local table="$1"
+
+    if [ -z "$(hgsqlLocal $genome -Ne "SHOW TABLES LIKE '$table'")" ]; then
+        echo "FAIL: Table doesn't exist: '$table'" 1>&2
+        return 1
+    fi
+
+    IFS=$'\t' read -a trackData <<< "$( 
+        hgsqlLocal $genome -Ne \
+            "SELECT grp,visibility,type FROM trackDb WHERE tableName='$table'" )"
+    type=${trackData[2]}
+    grp=${trackData[0]}
+    tier=${trackData[1]}
+
+    if [ -z "$hierarchical" ]; then
+        prefix=$outdir/${table}
+    else
+        prefix=$outdir/$genome/$grp/Tier$tier/$table
+    fi
+    mkdir -p $( dirname $prefix )
+
+    case $type in
+        narrowPeak) 
+            fetchRows $table | bgzip -c > ${prefix}.narrowPeak.gz ;;
+        broadPeak) 
+            fetchRows $table | bgzip -c > ${prefix}.broadPeak.gz ;;
+        # These are file formats that have to be downloaded separately.
+        # Ignored for now.
+        # bam) 
+        # bigWig*)
+        # bigBed*)
+        bedGraph*) fetchRows $table | bgzip -c > ${prefix}.bedGraph.gz ;;
+        bed*) fetchRows $table | sort -k1,1 -k2,2n -k3,3n | bgzip -c > ${prefix}.bed.gz ;;
+        genePred*) fetchRows $table | bgzip -c > ${prefix}.genePred.gz ;;
+        psl*) fetchRows $table | bgzip -c > ${prefix}.psl.gz ;;
+        *) echo "FAIL: Can't handle track '$table' of type '$type'" && return 1 ;;
+    esac 
+    echo "SUCCESS: $table" 1>&2
+}
+export -f exportTrack
+
+while getopts g:o:h opt; do
+    case $opt in
+        g) export genome=$OPTARG ;;
+        o) export outdir=$OPTARG ;;
+        h) export hierarchical=y ;;
+        *) usage && exit 1 ;;
+    esac
+done
+shift $((OPTIND - 1))
+
+[ -z "$genome" ] && {
+    usage
+    exit 1
+}
+
+if [ $# -eq 0 ]; then
+    tables=( $(hgsqlLocal $genome -Ne "SELECT tableName FROM trackDb" ) )
+else
+    tables=( "$@" )
+fi 
+
+export chromSizes=/tmp/${genome}.genome
+if [ ! -f $chromSizes ]; then
+    fetchChromSizes $genome > $chromSizes
+fi
+
+parallel --gnu exportTrack ::: ${tables[@]}

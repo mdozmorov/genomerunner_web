@@ -1,0 +1,130 @@
+#!/bin/bash
+
+source gilesc-common.sh
+
+bwAssertValid() {
+    bigWigInfo "$1" &> /dev/null && return 0 || {
+        "ERROR: $1 is not a valid BigWig file."
+        return 1
+    }
+}
+export -f bwAssertValid
+
+bwMeanScore() {
+    ( bigWigInfo "$1" 2> /dev/null | awk '$1=="mean:" {print $2}' ) \
+        || echo 0
+}
+export -f bwMeanScore
+
+# Normalize a BigWig data stream such that the mean score 
+# (across the entire BigWig) is one.
+# FIXME: should be mean = 0 and stdev = 1 ?
+bwNormalize() {
+    mu=$(bwMeanScore $1)     
+    awk -v mu=$mu '{ print $1 / mu; }' | perl -pe 'chomp if eof'
+}
+export -f bwNormalize
+
+bwCountSingleLocus() {
+    locus=$(echo "$1" | tr ':-' ' ')
+    bw=$2
+    count=$( ( bigWigSummary $bw $locus 1 2> /dev/null ) || echo 0 )
+    echo $count | bwNormalize $bw
+}
+export -f bwCountSingleLocus
+
+## Main functions
+
+bwCountVector() {
+    # bigWigAverageOverBed will, for sufficiently large files, 
+    # re-order the output in chromosome order.
+    [ $# != 2 ] && { 
+        echo "USAGE: bigWigCountVector <BED file> <BigWig file>" 
+        exit 1
+    }
+    bed=$1; bigwig=$2
+    bwAssertValid $2
+    tmpbed=$(mktemp)
+    awk '{$4=NR; print;}' $bed \
+        | bigWigAverageOverBed $bigwig stdin stdout 2> /dev/null \
+        | sort -n -k1 | awk '{print $NF}' | bwNormalize $bigwig
+}
+export -f bwCountVector
+
+
+bwCountLocus() {
+    locus="$1"
+    shift
+    for file in "$@"; do bwAssertValid $file; done
+    par --halt-on-error 1 bwCountSingleLocus $locus {} ::: "$@"
+}
+
+bwCountMatrix() {
+    BED=$1
+    shift
+    for file in "$@"; do bwAssertValid $file; done
+    echo -n '-	'
+    cut -f4 $BED | perl -pe 'chomp if eof' | tr '\n' '\t' 
+    par 'echo -e "\n{/.}\t\c" && bwCountVector $BED {} | tr "\n" "\t"' \
+        ::: "$@"
+    printf "\n"
+}
+
+bwDeleteInvalid() {
+    for file in "$@"; do
+        bwAssertValid $file || {
+            rm $file
+        }
+    done
+}
+
+usage() {
+    cat <<EOF
+Create an expression matrix or vector from transcript loci
+and BigWig file(s).
+
+USAGE: 
+    $0 [options] <BED File> <BigWig files> : returns a matrix
+    $0 [options] <BED File> <Single BigWig file> : returns a vector
+    $0 [options] -l <locus> <BigWig files> : returns a vector
+    $0 -x <BigWig files> : 
+        DELETES any argument that is not a valid BigWig file.
+            
+<locus> is in the form: "chr1:1-1000"
+EOF
+    exit 1
+}
+
+main() {
+    locus=
+    delete=
+
+    while getopts "xl:" arg; do
+        case $arg in
+            h)  usage ;; 
+            l)  locus=${OPTARG} ;;
+            x)  delete=true ;;
+            *)  usage ;;
+        esac
+    done
+
+    shift $((OPTIND-1))
+
+    if [ -n "$delete" ]; then
+        bwDeleteInvalid "$@"
+        exit 0
+    fi
+
+    if [ -n "$locus" ]; then 
+        bwCountLocus $locus "$@"
+    elif [ $# -lt 2 ]; then
+        usage
+        exit 1
+    elif [ $# == 2 ]; then
+        bwCountVector "$@"
+    else
+        bwCountMatrix "$@"
+    fi
+}
+
+main "$@"

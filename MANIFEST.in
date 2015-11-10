@@ -1,0 +1,2 @@
+recursive-include grsnp/frontend *
+include grsnp/*.txt

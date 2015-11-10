@@ -1,0 +1,46 @@
+Database version:	db_2.00_06.10.2014
+Background:	3gwasCatalog
+Time:	2014-11-25 22:12:52
+Jobname:	bmdipl2qsh1vhbigsyh5eqc6n7ks76m2
+Multiple test correction:	fdr
+Strand:	both
+% Score threshold:	%
+Organism:	hg19
+
+###LOG###
+2014-11-25 17:16:45,981 INFO Enrichment analysis started
+2014-11-25 17:16:50,162 INFO Caclulating overlap stats on background and H3K4me3_Stomach_Smooth_Muscle
+2014-11-25 17:16:53,527 INFO Caclulating overlap stats on background and H3K4me3_CD3_Primary_Cells
+2014-11-25 17:16:57,050 INFO Caclulating overlap stats on background and H3K4me3_Adipose_Derived_Mesenchymal_Stem_Cell_Cultured_Cells
+2014-11-25 17:17:00,018 INFO Caclulating overlap stats on background and H3K4me3_CD8_Naive_Primary_Cells
+2014-11-25 17:17:03,277 INFO Caclulating overlap stats on background and H3K4me3_Adipose_Nuclei
+2014-11-25 17:17:05,824 INFO Caclulating overlap stats on background and H3K4me3_CD8_Memory_Primary_Cells
+2014-11-25 17:17:08,021 INFO Caclulating overlap stats on background and H3K4me3_Brain_Hippocampus_Middle
+2014-11-25 17:17:10,823 INFO Caclulating overlap stats on background and H3K4me3_Brain_Inferior_Temporal_Lobe
+2014-11-25 17:17:13,313 INFO Caclulating overlap stats on background and H3K4me3_Brain_Cingulate_Gyrus
+2014-11-25 17:17:16,108 INFO Caclulating overlap stats on background and H3K4me3_CD19_Primary_Cells
+2014-11-25 17:17:18,546 INFO Caclulating overlap stats on background and H3K4me3_Pancreatic_Islets
+2014-11-25 17:17:21,188 INFO Caclulating overlap stats on background and H3K4me3_Duodenum_Mucosa
+2014-11-25 17:17:23,378 INFO Caclulating overlap stats on background and H3K4me3_Colonic_Mucosa
+2014-11-25 17:17:25,686 INFO Caclulating overlap stats on background and H3K4me3_Brain_Substantia_Nigra
+2014-11-25 17:17:28,534 INFO Caclulating overlap stats on background and H3K4me3_Mobilized_CD34_Primary_Cells
+2014-11-25 17:17:31,092 INFO Caclulating overlap stats on background and H3K4me3_Adult_Liver
+2014-11-25 17:17:33,702 INFO Caclulating overlap stats on background and H3K4me3_Duodenum_Smooth_Muscle
+2014-11-25 17:17:36,555 INFO Caclulating overlap stats on background and H3K4me3_Stomach_Mucosa
+2014-11-25 17:17:38,859 INFO Caclulating overlap stats on background and H3K4me3_CD34_Cultured_Cells
+2014-11-25 17:17:41,119 INFO Caclulating overlap stats on background and H3K4me3_CD34_Primary_Cells
+2014-11-25 17:17:43,545 INFO Caclulating overlap stats on background and H3K4me3_Adult_Kidney
+2014-11-25 17:17:46,152 INFO Caclulating overlap stats on background and H3K4me3_Colon_Smooth_Muscle
+2014-11-25 17:17:48,715 INFO Caclulating overlap stats on background and H3K4me3_Skeletal_Muscle
+2014-11-25 17:17:51,390 INFO Caclulating overlap stats on background and H3K4me3_Muscle_Satellite_Cultured_Cells
+2014-11-25 17:17:53,749 INFO Caclulating overlap stats on background and H3K4me3_CD4_Naive_Primary_Cells
+2014-11-25 17:17:56,255 INFO Caclulating overlap stats on background and H3K4me3_CD4_Memory_Primary_Cells
+2014-11-25 17:17:59,237 INFO Caclulating overlap stats on background and H3K4me3_Bone_Marrow_Derived_Mesenchymal_Stem_Cell_Cultured_Cells
+2014-11-25 17:18:01,496 INFO Caclulating overlap stats on background and H3K4me3_Brain_Mid_Frontal_Lobe
+2014-11-25 17:18:03,973 INFO Caclulating overlap stats on background and H3K4me3_Brain_Anterior_Caudate
+2014-11-25 17:18:07,051 INFO Caclulating overlap stats on background and H3K4me3_Mesenchymal_Stem_Cell_Derived_Adipocyte_Cultured_Cells
+2014-11-25 17:18:09,792 INFO Caclulating overlap stats on background and H3K4me3_Treg_Primary_Cells
+2014-11-25 17:18:12,506 INFO Caclulating overlap stats on background and H3K4me3_Rectal_Smooth_Muscle
+2014-11-25 17:18:15,085 INFO Caclulating overlap stats on background and H3K4me3_Chondrocytes_from_Bone_Marrow_Derived_Mesenchymal_Stem_Cell_Cultured_Cells
+2014-11-25 17:18:17,745 INFO Caclulating overlap stats on background and H3K4me3_Rectal_Mucosa
+2014-11-25 17:18:18,608 INFO Analysis Completed

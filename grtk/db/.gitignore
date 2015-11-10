@@ -1,0 +1,10 @@
+*.obo
+*.soft
+\#*
+\.#*
+*.gz
+/__pycache__
+/bin
+
+*.swp
+*.swo

@@ -1,0 +1,53 @@
+#!/bin/bash
+
+# Cross-validate a vowpal_wabbit template against multiple sets of 
+# positively labeled IDs (one input file per set).
+
+usage() {
+    cat <<EOF 1>&2
+$0 [options] <template> <positive ID file> ...
+EOF
+}
+
+runOne() {
+    tmpdir=$(mktemp -d)
+    predictions=$(mktemp)
+    printf "%s\t%s\t" $1 $( wc -l $1 | awk '{print $1}' )
+    vwFillTemplate $template $1 \
+        | sort -k1,1 | split -n r/$nfold - $tmpdir/
+    for file in $tmpdir/*; do
+        model=$(mktemp)
+        cat $( ls $tmpdir/* | grep -v $file ) \
+            | vw --cache_file $$ \
+                --passes 5 --l2 0.1 -f $model 2> /dev/null
+        cat $file | vw -t -i $model -p /dev/stdout 2> /dev/null \
+            | awk '{print -1 * $1}'
+        rm -f $model
+    done | paste <(cut -f1 -d" " $tmpdir/* | sed -e 's/^-1/0/') - \
+         | perf -APR -ROC -R50 | awk '{print $2}' | tr '\n' '\t'
+    echo
+    rm -rf $tmpdir $model $$
+}
+export -f runOne
+
+nfold=10
+while getopts n: opt; do
+    case $opt in
+        n) nfold=$OPTARG ;;
+    esac
+done
+shift $((OPTIND - 1))
+
+[ $# -lt 2 ] && {
+    usage
+    exit 1
+}
+export template="$1"
+shift
+
+echo -e "Term\tN\tAPR\tROC\tR50"
+for file in "$@"; do
+    if [[ $( wc -l $file | awk '{print $1}' ) -gt 10 ]]; then
+        runOne $file
+    fi
+done

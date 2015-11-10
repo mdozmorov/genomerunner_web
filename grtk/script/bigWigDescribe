@@ -1,0 +1,43 @@
+#!/bin/bash
+
+# Descriptive statistics for RNA-seq data in BigWig format
+
+source gilesc-common.sh
+
+while getopts g: opt; do
+    case $opt in
+        g) genome=$OPTARG ;;
+    esac
+done
+
+[ -z "$genome" ] && echo "Genome not specified! Aborting." && exit 1
+
+shift $((OPTIND - 1))
+
+export cache=~/.cache/ucsc/$genome/
+mkdir -p $cache
+
+getTrack() {
+    bed=$cache/${1}.bed.gz
+    if [ ! -e $bed ]; then
+        hgExportBed $genome ${1} | gzip > $bed
+    fi
+    zcat $bed
+}
+export -f getTrack
+
+meanDepth() {
+    bigWigCount <( getTrack $1 ) $2 | ave stdin \
+        | awk '$1=="average" {print $2}'
+}
+export -f meanDepth
+
+describe() {
+    printf "%s\t%s\t%s\n" $( basename $1 .bw ) \
+        $( meanDepth lincRNAsTranscripts $1 ) \
+        $( meanDepth knownGene $1 )
+}
+export -f describe
+
+echo -e "-\tlncRNA\tGene"
+par describe ::: "$@"

@@ -1,0 +1,31 @@
+#!/usr/bin/env bash
+
+mapped_reads() {
+    samtools idxstats $1 | awk '{n += $3} END {print n}'
+}
+
+[ $# -lt 2 ] && {
+    echo "A wrapper for samtools bedcov."
+    echo "USAGE: $0 <in.bed> <in1.bam> [ ... ]"
+    exit 1
+}
+
+BED=$1
+BAM=()
+shift
+
+printf "chrom\tstart\tend\tname\tscore\tstrand"
+
+for bam in "$@"; do
+    if [ $(mapped_reads $bam) -lt 10000000 ]; then
+        continue
+    fi
+    if [ ! -f ${bam}.bai ]; then
+        samtools index $bam
+    fi
+    printf "\t%s" $(basename $bam .bam)
+    BAM+=($bam)
+done
+echo
+
+samtools bedcov $BED "${BAM[@]}"

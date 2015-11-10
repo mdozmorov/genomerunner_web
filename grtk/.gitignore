@@ -1,0 +1,17 @@
+*.swp
+*.swo
+*.o
+[0-9]*
+\#*#
+.#*
+*.results
+
+/data
+/bin
+/model
+/test
+/build
+
+__pycache__
+*.egg-info
+*.pyc

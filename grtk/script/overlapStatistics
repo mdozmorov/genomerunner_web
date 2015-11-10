@@ -1,0 +1,39 @@
+#!/bin/bash
+
+source $(dirname $0)/grtk.sh
+
+usage() {
+    cat <<EOF
+USAGE: overlapStatistics [options] <track> <index> ...
+For each index, report statistics about its tendency to overlap,
+   as a group, with the given track.
+
+Example: overlapStatistics query.bed ATF3.bed NFKB.bed
+EOF
+}
+
+overlapStatistics() {
+    index="$1"
+    local indexSize=$( intervalCount $index )
+    local overlap=$( overlapCount $index $track )
+    echo $index $trackSize $indexSize $overlap | tr ' ' '\t'
+}
+export -f overlapStatistics
+
+[ $# -lt 2 ] && {
+    usage
+    exit 1
+}
+
+export track="$1"
+[ ! -f $track ] && {
+    echo "ERROR: Track file $track does not exist!"
+    exit 1
+}
+export track=$( ensureTabix $track )
+export trackSize=$( intervalCount $track )
+shift
+
+# Yes, this header is backwards...
+echo -e "QueryFile\tIndexRegions\tQueryRegions\tIntersectingRegions"
+parallel --gnu -k overlapStatistics ::: "$@"

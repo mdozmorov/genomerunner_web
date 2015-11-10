@@ -1,0 +1,99 @@
+#!/usr/bin/env bash
+
+# Requirements:
+# - bedtools
+# - samtools
+# - bowtie2
+# - kent utilities (for bigwig only)
+#   - ave 
+#   - bedGraphToBigWig
+
+shopt -s nullglob
+
+usage() {
+    cat <<EOF 1>&2
+USAGE: $0 [options] -x path/to/bt2/ref -I path/to/input/dir
+
+Align fastq[.gz|.qp] files in a directory to BAM using Bowtie 2.
+
+Optional arguments:
+
+    -O  <dir>   Output the resulting bam files into a specific directory.
+                (By default, BAMs are output into the same directory as the 
+                input files.)
+    -w          Also create BigWig files.
+    -h          Show this help.
+EOF
+}
+
+[ $# == 0 ] && usage && exit 1
+
+while getopts whI:x: opt; do
+    case $opt in
+        h) usage && exit 0 ;;
+        I) indir="$OPTARG" ;;
+        O) outdir="$OPTARG" ;;
+        x) ref="$OPTARG" ;;
+        w) bigwig=y ;;
+    esac
+done
+
+[ -n "$indir" ] || {
+    echo "ERROR: Input directory (-I) not defined." 
+    exit 1
+}
+
+[ -n "$outdir" ] || outdir="$indir" 
+
+[ -n "$ref" ] || {
+    echo "ERROR: Bowtie 2 reference path (-x) not defined."
+    exit 1
+}
+
+# FIXME: doesn't handle situations where all 3 exist
+# FIXME: doesn't handle *.fastq or *.fastq.gz
+# FIXME: doesn't autodetect ncpu
+BT2_OPTS="-p 24 -x $ref --sensitive-local"
+
+# Get chrom sizes from bowtie2 reference
+chromSizes=$(mktemp)
+bowtie2-inspect -s $ref | grep '^Sequence' | cut -f2-3 > $chromSizes
+trap "rm -f $chromSizes" EXIT
+
+for file in $indir/*.fastq.qp; do
+    echo Aligning $file ...
+    id=$( basename ${file/_1//} .fastq.qp )
+    if [[ "$file" == *_1.fastq.qp ]]; then
+        id=$(basename $file _1.fastq.qp)
+        mate="$indir/${id}_2.fastq.qp"
+        if [ ! -f $mate ]; then
+            continue
+        fi
+        bowtie2 $BT2_OPTS -1 <( quip -cd $file ) -2 <( quip -cd $mate )
+    elif [[ "$file" == *_2.fastq.qp ]]; then
+        continue
+    else
+        id=$(basename $file .fastq.qp)
+        bowtie2 $BT2_OPTS -U <( quip -cd $file ) 
+    fi | samtools view -bS - | samtools sort - $outdir/$id
+
+    bam=$outdir/${id}.bam
+    samtools index $bam &
+
+    if [ -n $bigwig ]; then
+        bedGraph=$(mktemp)
+        bedtools genomecov -bg -ibam $bam > $bedGraph
+        bedGraphToBigWig $bedGraph $chromSizes $outdir/${id}.bw 
+        meanLength=$(samtools view $outdir/${id}.bam \
+            | cut -f10 | awk '{print length($1)}' | ave -tableOut stdin \
+            | awk 'NR==2 {print $6}')
+        nMapped=$(samtools view -c -F 4 $bam)
+        nUnmapped=$(samtools view -c -f 4 $bam) 
+        # In theory, this line could experience multiple threads writing
+        # at the same time, but it seems really unlikely
+        echo -e "[${id}.bw]\nread_length = $meanLength\nmapped = $nMapped\nunmapped = $nUnmapped\n" >> $outdir/meta.ini
+        rm -f $bedGraph
+    fi &
+done 2> /dev/null
+
+wait

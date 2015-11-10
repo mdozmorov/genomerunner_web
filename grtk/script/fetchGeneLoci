@@ -1,0 +1,46 @@
+#!/bin/bash
+
+# Fetch gene loci for a particular organism from UCSC in BED format
+# (Right now, returns Entrez Gene IDs as name)
+
+usage() {
+    cat <<EOF 1>&2
+USAGE: $0 [options] -g <genome>
+
+Required:
+    -g <genome>     The UCSC ID for a genome; e.g.: hg19, mm9. Required.
+
+Optional:
+    -u              Returns a unique (longest) locus for each output (Entrez) ID
+EOF
+}
+
+while getopts hug: opt; do
+    case $opt in
+        h) usage && exit 0 ;;
+        u) unique=y ;;
+        g) genome=$OPTARG ;;
+        *) usage && exit 1 ;;
+    esac
+done
+
+shift $((OPTIND - 1))
+[ -z "$genome" ] && {
+    usage
+    echo "ERROR: genome (-g) is required!" 1>&2
+    exit 1
+}
+
+cat <<EOF |
+SELECT knownToLocusLink.value as entrezID,chrom,strand,txStart,txEnd,cdsStart,cdsEnd,exonCount,exonStarts,exonEnds,proteinID,alignID
+FROM knownGene
+INNER JOIN knownToLocusLink
+ON knownToLocusLink.name=knownGene.name
+ORDER BY entrezID, (txEnd-txStart) DESC
+EOF
+hgsql $genome -N | genePredToBed stdin stdout | \
+if [ -n "$unique" ]; then
+    sort -u -k4,4
+else
+    cat
+fi

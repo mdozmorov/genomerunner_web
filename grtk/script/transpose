@@ -1,0 +1,6 @@
+#!/bin/bash
+
+input=stdin
+[ $# -gt 0 ] && input="$1"
+
+rowsToCols $input stdout

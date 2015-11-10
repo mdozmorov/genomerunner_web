@@ -1,0 +1,94 @@
+#!/usr/bin/env python
+"""
+This exports SOFT files (intended for whole-platform datasets
+found at ftp://ftp.ncbi.nlm.nih.gov/geo/platforms/) to a directory
+with one PCL file created per sample.
+
+There is an option to provide a "reference distribution": a file with
+floats, one per line, to normalize to. This assumes that both the reference
+distribution and the SOFT data roughly follow a Gaussian distribution,
+which is usually the case if the data are log-transformed. 
+"""
+
+import gzip
+import sys
+import io
+import argparse
+import os
+
+import pandas
+import numpy
+
+def read_ursa_pcl(path):
+    return pandas.read_csv(path, header=None, skiprows=1, sep="\t",
+            index_col=0)
+
+def read_lines(path):
+    with gzip.open(path) as h:
+        for line in h:
+            yield line.decode("UTF-8")
+ 
+def read_table(lines, end_tag):
+    buffer = io.StringIO()
+    for line in lines:
+        if line.startswith(end_tag):
+            buffer.seek(0)
+            return pandas.io.parsers.read_csv(buffer, sep="\t")
+        buffer.write(line)
+
+def read_reference_distribution(handle):
+    X = numpy.array([float(line) for line in handle])
+    return X.mean(), X.std()
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--id-field", "-i", 
+            default="symbol", choices=["probe_id", "entrez_id", "symbol"])
+    parser.add_argument("--reference-distribution", "-r",
+            type=argparse.FileType("r"))
+    parser.add_argument("--log-transform", "-l",
+            default=False, action="store_true",
+            help="Log-transform the SOFT data before normalization and printing.")
+    parser.add_argument("soft_path")
+    parser.add_argument("output_dir")
+    args = parser.parse_args()
+    id_field = {"probe_id" : "ID",
+                "entrez_id" : "ENTREZ_GENE_ID",
+                "symbol" : "Gene Symbol"}[args.id_field]
+
+    ref_mean = 0
+    ref_std = 1
+    if args.reference_distribution:
+        ref_mean, ref_std = \
+                read_reference_distribution(args.reference_distribution)
+        print("* Normalizing to mean / SD : ", ref_mean, ref_std)
+
+    lines = read_lines(args.soft_path)
+    for line in lines:
+        if line.startswith("^SAMPLE"):
+            sample_id = line.strip().split()[2]
+        elif line.startswith("!platform_table_begin"):
+            platform = read_table(lines, "!platform_table_end")
+        elif line.startswith("!sample_table_begin"):
+            sample = read_table(lines, "!sample_table_end")
+            sample = platform.merge(sample, left_on="ID", right_on="ID_REF")
+            print("Exporting %s ..." % sample_id, file=sys.stdout)
+            path = os.path.join(args.output_dir, sample_id)
+            X = sample[[id_field, "VALUE"]].groupby(id_field)\
+                    .aggregate(numpy.max)
+            # Make optional?
+            X = X.ix[numpy.array([" " not in item for item in X.index]),:] 
+            X_max = X.as_matrix().max()
+            X_min = X.as_matrix().min()
+            # FIXME: Probably more sophisticated ways 
+            # to find if it is Gaussian...
+            if X_max > 100 and not args.log_transform:
+                raise Exception("Data for %s (range: %0.2f - %0.2f) do not appear to be log-transformed and log-transformation was not specified. Aborting!" % (sample_id, X_min, X_max))
+            if args.log_transform:
+                X = X.apply(numpy.log2)
+            # Convert to Gaussian (this assumes the data is log-transformed)
+            #X = (X - X.mean()) / X.std()
+            #X *= ref_std
+            #X += ref_mean
+            with open(path, "w") as out:
+                X.to_csv(out, index=True, header=False, sep="\t")

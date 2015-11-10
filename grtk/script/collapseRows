@@ -1,0 +1,61 @@
+#!/usr/bin/env bash
+
+usage() {
+    cat <<EOF 1>&2
+Collapse rows of a matrix by max mean, similar to the R function.
+USAGE: $0 [ -h ] [ -m <mapping file> ] <matrix>
+
+The mapping is an optional, two-column file. In the first
+column are row IDs, and in the second are row groups. 
+
+If no mapping file is supplied, the row names of the matrix will be
+considered to be the row groups. In this case, each group of rows with
+duplicate row IDs will be collapsed into a single row.
+
+Other options:
+    -h : shows this help
+    -a : rows with IDs that do not have corresponding row groups 
+         in the mapping file are retained. (only applies to -m)
+EOF
+}
+
+tab() { tr ' ' '\t'; }
+
+mapping=
+retain_all=
+
+while getopts ham: opt; do
+    case $opt in
+        h) usage && exit 0 ;;
+        m) mapping=$OPTARG ;;
+        a) export retain_all="-a 2" ;;
+        *) usage && exit 1 ;;
+    esac
+done
+shift $((OPTIND - 1))
+
+exec {M}<"${1:-/proc/${$}/fd/0}" 
+
+read -a header <&$M
+export nc=${#header[@]}
+echo ${header[*]} | tr ' ' '\t'
+
+sort -k1,1 <&$M | if [ -n "$mapping" ]; then
+    join -t '	' $retain_all <(sort -k1,1 $mapping) -
+else
+    awk '{print $1,$0}' | tab
+fi | python <(cat <<'EOF'
+import sys, os
+ncol = int(os.environ["nc"])
+retain = os.environ.get("retain_all","")
+for i, line in enumerate(sys.stdin):
+    fields = line.split('\t')
+    if len(fields) < (ncol+1):
+        if retain:
+            fields.insert(0, fields[0])
+        else:
+            continue
+    print(sum(map(float, fields[2:])),
+        *fields[1:], sep="\t", end="")
+EOF
+) | sort -k2,2 -k1,1nr | cut -f2- | sort -u -k1,1

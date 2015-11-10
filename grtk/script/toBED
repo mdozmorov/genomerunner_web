@@ -1,0 +1,51 @@
+#!/bin/bash
+
+# Convert region files to BED format
+
+[ $# == 0 ] && {
+    cat <<EOF 1>&2
+USAGE: $0 <file>
+
+Convert region files to BED format on stdout.
+The file type is detected based on the extension.
+
+Supported types:
+* Binary formats:
+- bam
+- bigWig
+- bigBed
+
+* Text formats (may be gzipped and postfixed with .gz)
+- bed
+- vcf
+- broadPeak
+- narrowPeak
+EOF
+    exit 1
+}
+
+# FIXME: detect input type on stdin
+case "$1" in
+    *.vcf|*.vcf.gz) 
+        zcat -f "$1" | vcf2bed --do-not-sort 
+        ;;
+    *.bam)
+        bam2bed "$1"
+        ;;
+    *.bigWig|*.bigwig|*.bw)
+        bigWigToBedGraph "$1" stdout | awk '{print $1,$2,$3,".",$5}' \
+            | tr ' ' '\t' ;;
+    *.bigBed|*.bb|*.bigbed)
+        bigBedToBed $1 stdout
+        ;;
+    *.broadPeak|*.broadPeak.gz|*.narrowPeak|*.narrowPeak.gz)
+        zcat -f "$1" | cut -f1-6
+        ;;
+    *.dat|*.bed|*.bed.gz|*.gz)
+        # Assume it's bed if it has only a .gz extension
+        zcat -f "$1"
+        ;;
+    *)
+        echo "ERROR: file format not recognized for file: " $1 1>&2
+        exit 1
+esac | awk 'BEGIN { OFS="\t" } $2 == $3 { $3 += 1 } { print }'

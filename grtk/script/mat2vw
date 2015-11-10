@@ -1,0 +1,18 @@
+#!/usr/bin/awk -f
+
+# Convert a tab-delimited matrix with row and column names
+# to Vowpal Wabbit format.
+
+NR==1 {
+    for (i=2;i<NF; i++) {
+        names[i] = $i;
+    }
+}
+NR > 1 {
+    printf $1"\t" ;
+    printf names[2]":"$2 ;
+    for (i=3; i<NF; i++) { 
+        printf " "names[i] ":"$i ;
+    }
+    printf "\n" ;
+}

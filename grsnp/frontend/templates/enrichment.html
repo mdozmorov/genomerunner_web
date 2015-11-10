@@ -1,0 +1,630 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	% if status != "FINISHED":
+	<meta http-equiv="refresh" content="10">
+	% endif
+	<style type="text/css" title="currentStyle">
+	@import "static/css/demo_page.css";
+	@import "static/css/jquery.dataTables.css";
+	@import "static/css/demo_table.css";
+	@import "static/css/TableTools.css";
+	@import "static/css/jquery.tipsy.css";
+	.xaxis path, .xaxis line{
+		fill: none;
+		stroke: gray;
+		stroke-width: 1px;
+		</style>
+		<style>
+		body {
+			padding-top: 60px; /* 60px to make the container go all the way to the bottom of the topbar */
+		}
+		/* allows the check box tree to be rendered correctly*/
+		.ui-icon {float: left;}
+		</style>
+
+		<!-- For IE6-8 support of HTML5 elements -->
+			<!--[if lt IE 9]>
+			<script src="http://html5shim.googlecode.com/svn/trunk/html5.js"></script>
+			<![endif]-->
+
+			<link type="text/css" href="static/css/jquery.dataTables_themeroller.css" rel="stylesheet" />
+			<link type="text/css" href="static/css/ui-lightness/jquery-ui-1.8.16.custom.css" rel="stylesheet" />
+			<link href="static/css/bootstrap.min.css" rel="stylesheet"/>
+			<script type="text/javascript" src="static/js/jquery.js"></script>
+			<script type="text/javascript" src="static/js/jquery.tipsy.js"></script>
+			<script type="text/javascript" src="static/jui/jquery-ui-1.8.12.custom/js/jquery-ui-1.8.12.custom.min.js"></script>
+			<script src="static/js/bootstrap.min.js"></script>
+			<script type="text/javascript" language="javascript" src="static/js/jquery.dataTables.js"></script>
+
+			<script type="text/javascript" language="javascript"
+			src="static/js/TableTools.js"></script>
+			<script type="textjavascript" language="javascript"
+			src="static/js/bootstrap-tooltip.js"></script>
+
+			<script type="text/javascript" language="javascript"
+			src="static/js/ZeroClipboard.js"></script>
+			<script type="text/javascript" charset="utf-8">
+			$(document).ready(function() {
+				$('#tbl').dataTable({
+					"sDom": 'T<"clear">lfrtip',
+					"bJQueryUI": true,
+					"oTableTools": {
+						"sSwfPath": "static/swf/copy_csv_xls_pdf.swf"
+					}
+				});
+						//		setTimout(ReloadPage(),1000);
+						// this refreshes the page.  It is dependent on the content of the progress label
+						function ReloadPage(){
+							if ($("#progress").val !== "Progress: FINISHED" && $("#progress").val.indexOf("ERROR:") != -1){
+								location.reload();
+							}
+						}
+
+						$("#progressbar").progressbar({
+							value: ${curprog},
+							max: ${progmax}
+						});
+						$("#x_slider").slider({min:1,max:308,change:updategraph});
+						$("#gfname").popover({content: "test", placement: "top"});
+						$("#numfoi").popover({content: "test", placement: "top"});
+						$("#numgf").popover({content: "test", placement: "top"});
+						$("#obsoverlap").popover({content: "test", placement: "top"});
+						$("#expoverlap").popover({content: "test", placement: "top"});
+						$("#pvalue").popover({content: "test", placement: "top"});
+						$("#pybed_expoverlap").popover({content: "test", placement: "top"});
+						$("#pybed_p_value").popover({content: "test", placement: "top"});
+						$("#jaccard_observed").popover({content: "test", placement: "top"});
+						$("#jaccard_exporverlap").popover({content: "test", placement: "top"});
+						$("#jaccard_p_value").popover({content: "test", placement: "top"});
+						$("#obsprox").popover({content: "test", placement: "top"});
+						$("#exprox").popover({content: "test", placement: "top"});
+						$("#proximity_p_value").popover({content: "test", placement: "top"});
+						$("#x_slider").popover({content: "test", placement: "top"});
+						$("#coltograph").popover({content: "test", placement: "top"});
+
+						$(function() {
+							$("#accordion").accordion({
+								collapsible: true,
+								active: false
+							});
+						});
+
+
+
+					});
+
+function getQueryVariable(variable) { 
+	var query = window.location.search.substring(1); 
+	var vars = query.split("&"); 
+	for (var i = 0; i < vars.length; i++) { 
+		var pair = vars[i].split("="); 
+		if (pair[0] == variable) { 
+			return pair[1]; 
+		} 
+	} 
+	return null; 
+}
+
+
+
+</script>
+</head>
+<body>
+	<div class="topbar">
+		<div class="topbar-inner">
+			<div class="container-fluid">
+				<a class="brand" href="./" style="font-family:Futura,'Helvetica Neue', Arial">
+					<img width="120px" src="static/images/GRLogo.png" />
+				</a>
+				<ul class="pull-right">
+					<li><a href="./overview">Overview</a></li>
+					<li><a href="./news">News</a></li>
+					<li><a href="./demo">Demo</a></li>
+					<!-- <li><a href="./cite">How to Cite</a></li>
+					<li><a href="http://sourceforge.net/projects/genomerunner/">SourceForge</a></li>
+					<li><a href="./roadmap">Roadmap</a></li> -->
+					<li><a href="./help">Help</a></li>
+<!-- <div>
+					<li><a href="./google">Google Group</a></li>
+					<li><img width="30px" src="static/new-icon.jpg" alt="New: GenomeRunnerSNP Google Groups" /></li>
+</div> -->
+				</ul>
+			</div>
+		</div>
+	</div>
+	<br/>
+	<h2 style="margin-top: 60px;">Enrichment results for ${fois}</h2>
+	<div class="well" >
+		<table id="tbl" class="display" cellpadding="0"
+		cellspacing="0" border="0">
+		<thead>
+
+			<tr>
+				<th id="gfname" rel="popover" data-content="Name of genome annotation feature" value="gfname">GF Name</th>
+				<th id="numfoi" value="numfoi" data-content="Number of regions of interest">#FOIs</th>
+				<th id="numgf" value="numgf" data-content="Number of genome annotation features">#Genomic Features</th>
+				<th id="obsoverlap" value="obsoverlap" data-content="Number of regions of interest overlapping a genome annotation feature (observed in reality)">#Overlaps (observed)</th>
+				% for i,e in enumerate(run):
+				% if e == "pvalue":
+				<th id="expoverlap" value="expoverlap" data-content="Average number of random regions overlapping a genome annotation feature (expected by random chance)">#Overlaps (expected)</th>						
+				<th id="pvalue" value="pvalue" data-content="P-value from binomial distribution">P-value</th>
+				% endif
+				% if e == "pybedtool":
+				<th id="pybed_expoverlap" value="pybed_expoverlap" data-content="PyBedTools calculated number of random regions overlapping a genome annotation feature">#Overlaps (PyBed expected)</th>
+				<th id="pybed_p_value" value="pybed_p_value" data-content="P-value from PyBedTools">PyBed P-value</th>
+				% endif
+				% if e == "jaccard":
+				<th id="jaccard_observed" value="jaccard_observed" data-content="Jaccard statistics observed in reality">#Overlaps (Jaccard observed)</th>
+				<th id="jaccard_exporverlap"  value="jaccard_expoverlap" data-content="Jaccard statistics as expected by random chance">#Overlaps(Jaccard expected)</th>
+				<th id="jaccard_p_value" value="jaccard_p_value" data-content="Jaccard p-value calculated from binomial distribution">Jaccard P-value</th>
+				% endif
+				% if e == "proximity":
+				<th id="obsprox" value="obsprox" data-content="Average proximity of regions of interest to genome annotation features">Proximity to GF (observed)</th>
+				<th id="exprox" value="expprox" data-content="Average proximity of random regions to genome annotation features">Proximity to GF (expected)</th>
+				<th id="proximity_p_value" value="Proximity p-value calculated from binomial distiribution" data-content="This is a test">Proximity P-value</th>
+				% endif
+				% if e == "kolmogorov":
+				<th id="kolmogorov_p_value" value="kolmogorov_p_value" data-content="Kolmogorov-Smirnov p-value">Kolmogorov-Smirnov</th>
+				% endif
+				% if e == "hypergeometric":
+				<th id="hypergeometric_p_value" value="hypergeometric_p_value" data-content="Hypergeometric p-value">Hypergeometric Distribution</th>
+				% endif
+				% endfor
+			</tr>
+
+		</thead>
+		<tbody>
+
+			% for i,e in enumerate(enrichments):					
+			<tr class="${e.category()}">
+				<td>${e.B}</td>
+				<td>${e.nA}</td>
+				<td>${e.nB}</td>
+				<td>${e.observed}</td>
+				% for j,k in enumerate(run):
+				% if k == "pvalue":
+				<td>
+					% if e.expected != "NA":
+					${'%.2f' % round(e.expected)}
+					% else:
+					${e.expected}
+					% endif
+				</td>						
+				<td>
+					% if e.p_value != "NA":
+					${'{:.2E}'.format(e.p_value)}
+					% else:
+					${e.p_value}
+					% endif
+				</td>
+				% endif
+				% if k == "pybedtool":
+				<td>
+					% if e.pybed_expected != "NA":
+					${'%.2f' % round(e.pybed_expected)}
+					% else:
+					${e.pybed_expected}
+					% endif
+				</td>
+				<td>
+					% if e.pybed_p_value != "NA":
+					${'{:.2E}'.format(e.pybed_p_value)}
+					% else:
+					${e.pybed_p_value}
+					% endif
+				</td>
+				% endif
+				% if k == "jaccard":
+				<td>
+					% if e.jaccard_observed != "NA":
+					${'%.2f' % round(e.jaccard_observed)}
+					% else:
+					${e.jaccard_observed}
+					% endif
+				</td>
+				<td>
+					% if e.jaccard_expected != "NA":
+					${'%.2f' % round(e.jaccard_expected)}
+					% else:
+					${e.jaccard_expected}
+					% endif
+				</td>
+				<td>
+					% if e.jaccard_p_value != "NA":
+					${'{:.2E}'.format(e.jaccard_p_value)}
+					% else:
+					${e.jaccard_p_value}
+					% endif
+				</td>
+				% endif
+				% if k == "proximity":
+				<td>
+					% if e.obsprox != "NA":
+					${'%.0f' % round(e.obsprox)}
+					% else:
+					${e.obsprox}
+					% endif
+				</td>
+				<td>
+					% if e.expprox != "NA":
+					${'%.2f' % round(e.expprox)}
+					% else:
+					${e.expprox}
+					% endif
+				</td>
+				<td>
+					% if e.proximity_p_value != "NA":
+					${'{:.2E}'.format(e.proximity_p_value)}
+					% else:
+					${e.proximity_p_value}
+					% endif
+				</td>
+				% endif
+				% if k == "kolmogorov":
+				<td>
+					% if e.kolmogorov_p_value != "NA":
+					${'{:.2E}'.format(e.kolmogorov_p_value)}
+					% else:
+					${e.kolmogorov_p_value}
+					% endif
+				</td>
+				% endif
+				% if k == "hypergeometric":
+				<td>
+					% if e.hypergeometric_p_value != "NA":
+					${'{:.2E}'.format(e.hypergeometric_p_value)}
+					% else:
+					${e.hypergeometric_p_value}
+					% endif
+				</td>
+				% endif
+				% endfor
+			</tr>					
+			% endfor
+		</tbody>
+	</table>
+</div>
+<div style="margin: 10px;">
+	<div id="progressbar" ></div>
+	<div class="ui-widget" style="marginr:0px;">
+		<div class="ui-state-highlight ui-corner-all">
+			<p><span class="ui-icon ui-icon-info" style="float: left; margin-right: .3em;"></span> ${status}</p>
+		</div>
+	</div>
+</div>
+
+<div id="accordion" style="padding-bottom: 1em;list-style:none;">			
+	<h3  id="accordionheader"><a href="#" style="font-size:120%">Run Details</a></h3> 
+	<div>
+        <a class="btn btn-success" style="margin: 10px;" href="enrichment_log?id=${run_id}">Download Log File</a>
+		<div class="well">
+			<div id="runsettings">
+				<ul>
+					<li><b>Background:</b> ${background}</li>
+					<li><b>Number of Monte Carlo Runs:</b> ${niter}</li>
+					<li><b>Job Name:</b> ${jobname}</li>
+					<li><b>Filters:</b></li>
+					<ul>
+						<b>Score:</b> ${score}
+						<br>
+						<b>Name: </b> ${name}
+						<br>
+						<b>Strand: </b> ${strand}
+					</ul>
+				</ul>
+			</div>
+		</div>
+	</div>
+</div>
+<div class="well">
+	<div class="row">
+
+		<div style="margin:5px;" class="span5">
+			<div class="well">
+				<label  style="float: left; position: relative;bottom: 6px;"><h3>Plot the value of:</h3>
+				</label>
+				<select onchange="updategraph()" data-content="-LOG10(pvalue)" role="popover" id="coltograph">
+					% for j,k in enumerate(run):
+					% if k == "pvalue":
+					<option value="pvalue">pvalue</option>
+					% endif
+					% if k == "jaccard":
+					<option value="jaccard_p_value">Jaccard P-value</option>
+					% endif
+					% if k == "pybedtool":
+					<option value="pybed_p_value">PyBed P-value</option>
+					% endif
+					% if k == "proximity":
+					<option value="proximity_p_value">Proximity P-value</option>
+					% endif
+					% if k == "kolmogorov":
+					<option value="kolmogorov_p_value">Kolmogorov-Smornov</option>
+					% endif
+					% if k == "hypergeometric":
+					<option value="hypergeometric_p_value">hypergeometric P-value</option>
+					% endif
+					% endfor
+				</select>
+				<br></br>
+				<div id="legendGreen" style="width:20px;height:20px;border:1px solid #000;position: relative;bottom: 5px;background-color: #519E12;">
+					<label style="position: relative;left: 30px;">Underrepresented</label>
+				</div>
+				<div id="legendRed" style="width:20px;height:20px;border:1px solid #000;background-color: #9E2012;">
+					<label style="position: relative;left: 30px;">Overrepresented</label>
+				</div>
+			</div>
+		</div>
+		<div class="span7">
+
+			<div style="width: 40em !important;"  role="popover" data-content="Adjustment of P-value range" id='x_slider'></div>
+			<div id="graph">
+			</div>
+		</div>
+	</div>
+</div>
+<script src="static/js/d3.js"></script>
+<script>
+
+var columns = $('#tbl thead th').map(function() {
+				//gets the column names from the table
+				//assums that the value field does not contain spaces
+				return $(this).attr('value');
+			});
+
+var td = $('#tbl tbody tr').map(function(i){
+	var row = {};
+
+				//find the table cells in the current row
+				$(this).find('td').each(function(i) {
+					//determin the cell column name
+					var rowName = columns[i];
+
+					row[rowName] = $(this).text();
+
+				});
+				// return the row as an object
+
+				return row;}).get();
+
+function neglog10(val) {
+	if (val == 0.0){
+		return 10
+	}
+	else {
+		var logval = -1 * Math.log(parseFloat(val))/Math.log(10);
+		return logval 
+	}
+}
+
+			// the name of the column to graph
+			var curColumn  =$('#coltograph').val();
+
+			var curData = [];
+
+			// performs - log10 on the pvalue data and makes the value
+			// negative if the FOI is underrepresented
+			function formatlog(i,d){
+				d = neglog10(d);
+				if (curColumn == "kolmogorov_p_value"){
+					return d
+				}
+
+				if(curColumn == "pvalue"){
+					if (td[i]["obsoverlap"] < td[i]["expoverlap"]){
+						d = -1 * d;
+					}	
+					return d
+				}
+				if (curColumn == "pybed_p_value"){
+					if (td[i]["obsoverlap"] < td[i]["pybed_expoverlap"]){
+						d = -1 * d;
+					}	
+					return d
+				}
+				if (curColumn == "jaccard_p_value"){
+					if (td[i]["jaccard_observed"] < td[i]["jaccard_expoverlap"]){
+						d = -1 * d;
+					}	
+					return d
+				}
+				if (curColumn == "proximity_p_value"){
+					if (td[i]["obsprox"] < td[i]["expprox"]){
+						d = -1 * d;
+					}	
+					return d
+				}
+				return d;
+			}			
+
+
+			jQuery.each(td,function(i,d) {
+				curData.push(formatlog(i,d[curColumn]));
+			});
+
+
+
+
+
+
+			var margin = {top: 20, right: 100, bottom: 5, left: 5};
+			var width = 500; 
+			var pvmin = d3.min(curData,function(d) { return d;});
+			var pvmax = d3.max(curData,function(d) { return d;});
+			var barPadding = 3;
+			var height = curData.length * barPadding*4;
+			var curColor = ""
+			var abmin = Math.abs(pvmin);
+			var abmax = Math.abs(pvmax);
+			// Set the default cuttoff for the x axis
+			var cur_slider = 10 
+			var x = d3.scale.linear().domain([
+				-1 * cur_slider 
+				, cur_slider
+				])
+			.rangeRound([20,width]).nice();
+
+			var xAxis = d3.svg.axis()
+			.scale(x)
+			.orient("bottom")
+			.ticks(5).tickSize(6,3,3);
+
+			function updatescales(){
+				curColumn  =$('#coltograph').val();
+				curData = [];
+				jQuery.each(td,function(i,d) {
+					curData.push(formatlog(i,d[curColumn]));
+				});
+				margin = {top: 20, right: 100, bottom: 5, left: 5};
+				width = 500; 
+				pvmin = d3.min(curData,function(d) { return d;});
+				pvmax = d3.max(curData,function(d) { return d;});
+				barPadding = 3;
+				height = td.length * barPadding*4;
+				curColor = ""
+				abmin = Math.abs(pvmin);
+				abmax = Math.abs(pvmax);
+
+
+				x = d3.scale.linear().domain([
+					-1 * cur_slider 
+					, cur_slider
+					])
+				.rangeRound([20,width]).nice();
+
+				xAxis = d3.svg.axis()
+				.scale(x)
+				.orient("bottom")
+				.ticks(5).tickSize(6,3,3);
+
+
+			}
+
+
+			function recfill(curRow){
+				if (curColumn == "kolmogorov_p_value")
+				{
+					return "#9E2012"
+				}
+				if (curRow < 0){return "#519E12";}
+				if (curRow > 0){return "#9E2012";}
+			}	
+
+			var bargraph2 = d3.select("#graph").
+			append("svg:svg")
+			.attr("wdith",width + margin.left + margin.right)
+			.attr("height",height +margin.top + margin.bottom);
+			function sortlist(a,b){
+				return ((a<b) ? -1:((a > b) ? 1 : 0));
+			}
+			td.sort(sortlist);
+
+
+
+
+				// draw the bars
+				bargraph2.selectAll("rect").
+				data(curData).
+				enter().
+				append("svg:rect")
+				.attr("x",function(d,i) {return x(Math.min(0,d));})
+				.attr("y",function(d,i) {return i*(height/curData.length) + margin.top;})
+				.attr("fill",function(d,i) {return recfill(d);})
+				.attr("height", height/td.length - barPadding) 
+				.attr("id", function(d,i) {return  i})
+				.attr("width", function(d) { return Math.abs(x(d) - x(0));})
+
+				// draw genomic feature names	
+				bargraph2.selectAll("text")
+				.data(td)
+				.enter()
+				.append("text")
+				.attr("class","lblgfname")
+				.text(function(d) {
+					return d.gfname;
+				})
+				.attr("x",function(d,i) { return x(Math.min(0,curData[i])) + Math.abs(x(curData[i]) - x(0)) + 10;})
+				.attr("y",function(d,i) {return i*(height/curData.length) + margin.top + 7;})
+				.attr("text-anchor","left")
+				.attr("style", "font-size: 12; font-family: Helvetica, sans-serif")
+				// draw axis 
+
+
+				bargraph2.append("g")
+				.attr("class","xaxis")
+				.attr("transform","translate(0,0)")
+				.attr("width",width)
+				.attr("style", "font-size: 12; font-family: Helvetica, sans-serif")
+				.call(xAxis);
+
+				bargraph2.append("svg:line")
+				.attr("class","yaxis")
+				.attr("x1",x(0))
+				.attr("x2",x(0))
+				.attr("y1", 20)
+				.attr("y2",height)
+				.attr("stroke","grey")
+				.attr("stroke-width",1);
+
+				// animates the graph during	
+				function updategraph(){
+					cur_slider = jQuery("#x_slider").slider("value");
+
+					curColumn = $('#coltograph').val()
+					updatescales();
+					bargraph2.selectAll("rect").
+					data(curData)
+					.transition()
+					.ease("linear")
+					.attr("x",function(d,i) {return x(Math.min(0,d));})
+					.attr("y",function(d,i) {return i*(height/curData.length) + margin.top;})
+					.attr("height", height/curData.length - barPadding) 
+					.attr("width", function(d) { return Math.abs(x(d) - x(0));})
+					.attr("fill",function(d,i) {return recfill(d);})
+
+					bargraph2.selectAll(".yaxis")
+					.transition()
+					.ease("linear")
+					.attr("x1",x(0))
+					.attr("x2",x(0))
+					.attr("y1", 20)
+					.attr("y2",height)
+					.attr("stroke","grey")
+					.attr("stroke-width",1);
+
+					bargraph2.selectAll(".xaxis")
+					.transition()
+					.ease("cubic-in-out")
+					.attr("width",width)
+					.call(xAxis);
+
+
+					bargraph2.selectAll(".lblgfname")
+					.data(td)
+					.text(function(d) {
+						return d.gfname;
+					})
+					.transition()
+					.ease("linear")
+					.attr("x",function(d,i) { return x(Math.min(0,curData[i])) + Math.abs(x(curData[i]) - x(0)) + 10;})
+					.attr("y",function(d,i) {return i*(height/curData.length) + margin.top + 7;});
+
+
+				}
+
+				$('svg rect').tipsy({
+					gravity: 's',
+					html: true,
+					title: function(){
+						var d = $(this).attr("id");
+						return '<p> #observed: ' + td[d]['obsoverlap'] + '<br/>#expected: '
+						+ td[d]['expoverlap'] + '<br/>P-value: '
+						+ td[d]['pvalue'] + '<br/> ' 
+						'</p>'; 
+					}
+				});
+
+				</script>				
+			</body>
+			</html>
+

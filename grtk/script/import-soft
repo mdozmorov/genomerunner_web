@@ -1,0 +1,218 @@
+#!/usr/bin/env python
+
+import collections
+import gzip
+import io
+import itertools
+import re
+import sys
+import subprocess
+
+import psycopg2
+import pandas
+import numpy
+
+import grtk.db
+
+def as_float(item):
+    try:
+        return float(item)
+    except:
+        return numpy.nan
+        
+def maybe(m, key, fn):
+    v = m.get(key)
+    if v:
+        return fn(v)
+
+def join_lines(items):
+    return "\n".join(items)
+
+def read_lines(handle):
+    for line in handle:
+        try:
+            yield line.decode("UTF-8")
+        except UnicodeDecodeError:
+            continue
+
+def read_value(line):
+    return "".join(line.strip().split(" = ")[1:])
+
+def read_table(lines, end_tag):
+    """Read a platform or series table into a DataFrame."""
+    buffer = io.StringIO()
+    for line in lines:
+        if line.startswith(end_tag):
+            buffer.seek(0)
+            return pandas.io.parsers.read_csv(buffer, sep="\t")
+        buffer.write(line)
+
+db = None
+c = None
+platform = None
+genes = None
+
+def connect():
+    global db
+    global c
+    db = grtk.db.connect()
+    c = db.cursor()
+
+def initialize(_genes, _platform):
+    global platform
+    global genes
+    platform = _platform
+    genes = _genes
+
+    connect()
+
+def group_sample_lines(lines):
+    group = []
+    for line in lines:
+        if line.startswith("^SAMPLE"):
+            if group:
+                yield (id, group)
+            id = read_value(line)
+            group = []
+        else:
+            group.append(line)
+    yield (id, group)
+
+def handle_sample(args):
+    sample_accession, lines = args
+    lines = iter(lines)
+    sample = {"accession" : sample_accession}
+    for line in lines:
+        if line.startswith("!Sample"):
+            try:
+                key, value = line.strip().split(" = ", 1)
+                key = key.replace("!Sample_", "")
+                if key == "characteristics_ch1":
+                    sample.setdefault("characteristics",[])
+                    sample["characteristics"].append(value)
+                elif key == "title":
+                    sample["title"] = value
+                elif key == "description":
+                    sample.setdefault("description", [])
+                    sample["description"].append(value)
+                elif key == "channel_count":
+                    sample["channel_count"] = int(value)
+                elif key == "molecule_ch1":
+                    sample["molecule"] = value
+                elif key == "source_name_ch1":
+                    sample["source"] = value
+            except Exception as e:
+                continue
+        elif line.startswith("!sample_table_begin"):
+            try:
+                expression = read_table(lines, "!sample_table_end")
+                expression_vector = pandas.Series(
+                        [as_float(item) for item in expression["VALUE"]],
+                        index=expression["ID_REF"])
+                sample["expression"] = expression_vector
+                break
+            except Exception as e:
+                print(e)
+                continue
+    try:
+        c.execute("""
+            INSERT INTO sample ( platform_id, accession, title, 
+                characteristics, description, molecule, 
+                source, channel_count) 
+            VALUES (%s,%s,%s,%s,%s,%s,%s,%s) RETURNING id""",
+                (platform.id, sample["accession"], sample.get("title"),
+                 maybe(sample, "characteristics", join_lines),
+                 maybe(sample, "description", join_lines),
+                 sample.get("molecule"),
+                 sample.get("source"),
+                 maybe(sample, "channel_count", int)))
+        sample_id = c.fetchone()[0]
+        db.commit()
+
+        x = sample["expression"]
+        #v = numpy.log2(x) if x.max() > 100 else numpy.array(x)
+        x = pandas.Series(x, index=x.index)
+        #x = (x - x.mean()) / x.std()
+        x_g = x.groupby(platform.ix[x.index, "ENTREZ_GENE_ID"]).max()
+        v = numpy.log2(numpy.array([x_g.get(str(g), float("NaN")) for g in genes]))
+        vm = numpy.ma.masked_array(v, numpy.isnan(v))
+        v = (v - vm.mean()) / vm.std()
+        c.execute("INSERT INTO expression (sample_id, data, known) VALUES (%s,%s,%s)", 
+                (sample_id, list(v), [bool(item) for item in numpy.invert(numpy.isnan(v))]))
+
+        #c.executemany("INSERT INTO probe_expression VALUES (%s,%s,%s)",
+        #        [(platform.probe_id_map[probe_accession], sample_id, value) 
+        #        for probe_accession, value
+        #        in zip(x.index, x)]) 
+        db.commit()
+    except Exception as e:
+        print("ERROR:", sample["accession"], e)
+        db.rollback()
+    return sample_accession
+
+if __name__ == "__main__":
+    connect()
+    c.execute("SELECT id FROM gene WHERE taxon_id=9606 ORDER BY id")
+    genes = [row[0] for row in c]
+
+    handle = gzip.open(sys.argv[1])
+    lines = read_lines(handle)
+
+    # Read the platform data
+    while True:
+        line = lines.__next__().strip()
+        if line.startswith("!platform_table_begin"):
+            break
+        elif line.startswith("!Platform_taxid"):
+            taxon_id = int(read_value(line))
+        elif line.startswith("!Platform_geo_accession"):
+            accession = read_value(line)
+
+    platform = read_table(lines, "!platform_table_end")
+    if not "ENTREZ_GENE_ID" in platform.columns:
+        raise Exception("Cannot handle this platform as there is no mapping of probes to Entrez Gene IDs.")
+    platform.index = platform["ID"]
+    c.execute("""INSERT INTO platform (taxon_id, accession) 
+        VALUES (%s,%s) RETURNING id""", (taxon_id, accession))
+    platform.id = c.fetchone()[0]
+
+    platform.probe_id_map = {}
+    c.execute("SAVEPOINT sp")
+    for probe_acc in platform["ID"]:
+        c.execute("""INSERT INTO probe (platform_id, accession)
+            VALUES (%s,%s) RETURNING id""", (platform.id, probe_acc))
+        probe_id = c.fetchone()[0]
+        platform.probe_id_map[probe_acc] = probe_id
+        c.execute("RELEASE SAVEPOINT sp; SAVEPOINT sp;")
+
+        gene_id_list = platform.ix[probe_acc, "ENTREZ_GENE_ID"]
+        if type(gene_id_list) == float:
+            if numpy.isnan(gene_id_list):
+                continue
+            gene_id_list = str(gene_id_list)
+        for gene_id in map(int, gene_id_list.split(" /// ")):
+            try:
+                c.execute("INSERT INTO probe_gene VALUES (%s,%s)", 
+                        (probe_id, int(gene_id)))
+                c.execute("RELEASE SAVEPOINT sp; SAVEPOINT sp;")
+            except psycopg2.IntegrityError:
+                # Probably a deprecated Entrez Gene ID, just skip it
+                c.execute("ROLLBACK TO SAVEPOINT sp")
+    db.commit()
+
+    multicore = True
+
+    if multicore:
+        import multiprocessing
+        p = multiprocessing.Pool(initializer=initialize, 
+            initargs=(genes,platform))
+        rows = p.imap_unordered(handle_sample, 
+                group_sample_lines(lines), 10)
+    else:
+        initialize(genes, platform)
+        rows = map(handle_sample, group_sample_lines(lines))
+
+    for accession in rows:
+        print(accession)
+
+    db.close()

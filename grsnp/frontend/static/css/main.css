@@ -1,0 +1,88 @@
+#page-wrap {
+	background: #F8F8F8;
+	min-width: 780px;
+	max-width: 1260px;
+	margin: 10px auto;
+	border-radius: 15px;
+	
+}
+#page-wrap #inside {
+	margin: 10px 10px					0px 10px;
+	padding-top: 10px;
+	padding-bottom: 10px;
+	background: #F8F8F8;
+}
+
+#main-content {
+	padding-left: 230px;
+	padding-top: 20px;
+	background: #F8F8F8;
+}
+
+#header {
+	background: #006DD3;
+	text-align: middle-left;
+	height: 80px;
+	border-radius: 15px;
+}
+
+#left-sidebar {
+	width: 150px;
+	float: left;
+	padding-right:adding-left: 15px;
+	padding-top: 20px;
+}
+
+#footer {
+	background: #267f23;
+	text-align: center;
+	padding-top: 20px;
+	padding-bottom: 20px;
+	border-collapse:or: white;
+}
+ul { list-style-type: none;
+	 padding-left: 0px;}
+body { background: #1C1C1C;}
+img { padding: 10px; border-radius: 15px;} 
+div.tooltip {   
+  position: absolute;           
+  text-align: center;           
+  width: 60px;                  
+  height: 28px;                 
+  padding: 2px;             
+  font: 12px sans-serif;        
+  background: black;   
+  border: 0px;      
+  border-radius: 8px;           
+  pointer-events: none;         
+}
+
+body {
+		margin: 0px 10px; padding:0px;
+		position: relative;
+		width: 100%;
+	}
+	.ui-accordion-content.ui-helper-reset.ui-widget-content.ui-corner-bottom.ui-accordion-content-active{
+		margin: 9px;
+	}
+	#content{
+		margin:0px auto;
+		text-align:left;
+		padding:15px;
+	}
+	#ucsc {
+		padding-left: 0px;
+	}
+	#treeview-inner{
+		margin-left: -40px;
+	}
+	label {
+		font-size: 120%;
+	}
+	.ui-widget-content { background: #ffffff url(images/ui-bg_glass_75_ffffff_1x400.png) 50% 50% repeat-x; color: #404040; }
+	#divCheckBox { border: 2px solid #C0C0C0;
+				   padding: 3px; }
+	/* allows the check box tree to be rendered correctly*/
+	.ui-icon {float: left;}
+	.popover {background: whiteSmoke;border: 1px solid #5E5E5E;}
+	.ui-accordion-content.ui-helper-reset.ui-widget-content.ui-corner-bottom.ui-accordion-content-active {heigh: 100%;}

@@ -1,0 +1,104 @@
+#!/bin/bash
+source $(dirname $0)/grtk.sh
+
+usage() {
+    cat <<EOF
+USAGE: annotationAnalysis [options] <track> index ...
+For each region in <track>, perform a comparison against each given index.
+By default, counts the number of regions in each index 
+   which overlap with the given region.
+Example: annotationAnalysis -B ATF3.bed genes.bb promoters.bb
+
+formatting:
+   -f/--fields <fields>       On each line, instead of printing the 
+                              entire region, print the provided fields 
+                              (similar syntax as GNU cut; one-indexed; 
+                              example: -f 1-3,5).  Overrides -N.
+                              Open-ended ranges (e.g, -f3-) are currently
+                              not supported.
+                              (default: 1-3)
+   -B/--basename-header       When printing input file names
+                              in the header line, omit the directory 
+                              and file extension
+   -d/--delimiter DELIM       Join all output fields by DELIM. 
+                              (default: tab).
+   -D/--region-delimiter D    Join output fields of each region by DELIM.
+                              (default: "|"). Partially overrides -d.
+EOF
+}
+
+BASENAME_HEADER=
+DELIM='	'
+RDELIM='|'
+FIELDS=1-3
+
+while true; do
+    case "$1" in
+        -h|--help)
+            usage
+            exit 0
+            ;;
+        -f|--fields)
+            shift; FIELDS=$1; shift; ;;
+        -B|--basename-header)
+            shift; BASENAME_HEADER=y; ;;
+        -d|--delimiter)
+            shift; DELIM=$1; shift; ;;
+        -D|--region-delimiter)
+            shift; RDELIM=$1; shift; ;;
+        -*)
+            echo "ERROR: Unrecognized option: $1"
+            exit 1
+            ;;
+        *)
+            break;
+            ;;
+    esac
+done
+
+[ $# -lt 2 ] && {
+    usage
+    exit 1
+}
+
+export track=$(mktemp)
+toBED $1 > $track
+atexit() {
+    rm -f $track
+}
+trap "atexit" EXIT
+shift
+
+annotationAnalysis() {
+    index=$1
+    if [ -z "$( tabix -B $index $track | head -1 )" ]; then
+        echo -e "chrNonexistentZZZ\t0\t1000"
+    else
+        tabix -B $index $track
+    fi  | bedtools intersect -sorted -c -a $track -b - \
+        | awk '{print $NF}' | tr '\n' '\t'
+    printf "\n"
+}
+export -f annotationAnalysis
+
+printf "Region\t"
+indexes=()
+for path in "$@"; do
+    if [[ "$index" == *.tbi ]]; then
+        echo "WARN: $index is not a valid region file (skipping)!" 1>&2
+        continue
+    fi
+
+    indexes+=( $( ensureTabix $path ) ) || exit 1
+    if [ -n "$BASENAME_HEADER" ]; then
+        printf "\t%s" $( basename $path | cut -d"." -f1 )
+    else
+        printf "\t%s" $path
+    fi
+done
+printf "\n"
+export -a indexes
+
+paste <(cut -f$FIELDS $track | tr '\t' "$RDELIM") \
+      <(parallel -j 1 --gnu -k annotationAnalysis ::: "${indexes[@]}" \
+        | rowsToCols -tab stdin stdout) | tr '\t' "$DELIM"

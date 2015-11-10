@@ -1,0 +1,32 @@
+#!/usr/bin/env python2
+"""
+Exports the genes in the GFF found at:
+ftp://ftp.ncbi.nlm.nih.gov/genomes/H_sapiens/GFF/ref_GRCh37.p13_top_level.gff3.gz
+to BED format.
+"""
+
+from __future__ import print_function
+
+import gzip
+import sys
+
+import pybedtools
+
+if __name__ == "__main__":
+
+    chromosomes = {}
+
+    with gzip.open(sys.argv[1]) as h:
+            for record in pybedtools.BedTool(h):
+                    type = record.fields[2]
+                    if type == "gene":
+                            id = [item for item in record.attrs["Dbxref"].split(",") 
+                                  if item.startswith("GeneID:")][0].split(":")[1]
+                            chr = chromosomes.get(record.chrom)
+                            if chr:
+                                    # chromosome will be none if the
+                                    # gene is on an unlocalized region
+                                    print(chr, record.start, record.end, \
+                                          id, ".", record.strand, sep="\t")
+                    elif type == "region" and record.attrs.get("genome") == "chromosome":
+                            chromosomes[record.chrom] = "chr" + record.attrs["Name"]

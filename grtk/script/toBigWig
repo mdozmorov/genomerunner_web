@@ -1,0 +1,48 @@
+#!/bin/bash
+
+# Convert files of various types to BigWig (in-place)
+
+source $(dirname $0)/grtk.sh
+
+usage() {
+    cat <<EOF 1>&2
+USAGE: 
+    $0 -g <genome> <input.file> output.bw
+OR 
+    $0 -g <genome> -O <output directory> <input.file> ...
+
+Convert the file to BigWig. If the input file is not BedGraph or BigWig,
+convert it first to BED, then to BEDGraph using the score field.
+EOF
+}
+
+while getopts g: opt; do
+    case $opt in
+        g) export genome=$OPTARG ;;
+    esac
+done
+shift $((OPTIND - 1))
+
+[ -z "$genome" ] && {
+    usage
+    exit 1
+}
+
+export chromSizes=/tmp/${genome}.genome
+if [ ! -f $chromSizes ]; then
+    fetchChromSizes $genome > $chromSizes
+fi
+
+[ "$1" == *.bigWig ] || [ "$1" == *.bw ] && {
+    exit 0
+}
+
+if [[ $( lineCount "$1" | cut -f1 ) == "0" ]]; then
+    exit 0
+fi
+
+bedGraph=$(mktemp)
+toBED $1 | sort -S 1G -k1,1 -k2,2n -k3,3n \
+    | bedtools genomecov -bg -i - -g $chromSizes > $bedGraph
+bedGraphToBigWig $bedGraph $chromSizes "$2"
+rm -f $bedGraph

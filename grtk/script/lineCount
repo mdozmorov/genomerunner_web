@@ -1,0 +1,32 @@
+#!/bin/bash
+# Count lines in possibly GZipped files, and cache the result
+
+CACHEDIR=$HOME/.grtk/lineCount
+LCDB=$CACHEDIR/lc.kch
+MTIMEDB=$CACHEDIR/mtime.kch
+
+mkdir -p $CACHEDIR
+
+[ ! -f $LCDB ] && kchashmgr create $LCDB
+[ ! -f $MTIMEDB ] && kchashmgr create $MTIMEDB
+
+[ $# -eq 0 ] && {
+    cat <<EOF 1>&2
+USAGE: lineCount <files> ...
+EOF
+}
+
+for relpath in "$@"; do
+    if [ ! -f $relpath ]; then
+        echo "ERROR: File '$relpath' does not exist!" 1>&2
+    fi 
+    path=$( realpath $relpath )
+    dbmtime=$( kchashmgr get $MTIMEDB $path 2> /dev/null || echo 0 ) 
+    mtime=$( stat -c "%Y" $path )
+    if [ -z "$dbmtime" ] || [ $mtime -gt $dbmtime ]; then
+        lc=$( zcat -f $path | wc -l | cut -d" " -f1 )
+        kchashmgr set "$LCDB" "$path" "$lc"
+        kchashmgr set "$MTIMEDB" "$path" "$mtime"
+    fi
+    printf "%s\t%s\n" $( kchashmgr get $LCDB $path ) $relpath 
+done

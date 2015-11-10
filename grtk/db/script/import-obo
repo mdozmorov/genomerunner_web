@@ -1,0 +1,56 @@
+#!/usr/bin/env perl
+
+use feature qw(say);
+use OBO::Parser::OBOParser;
+use DBI;
+use DBD::Pg;
+
+scalar @ARGV == 5 || 
+    die "USAGE: import-obo db-schema db-host ontology-namespace ontology-description obo-path";
+
+my $db_schema = shift(@ARGV);
+my $db_host = shift(@ARGV);
+
+my $ontology_namespace = shift(@ARGV);
+my $ontology_description = shift(@ARGV);
+my $path = shift(@ARGV);
+my $db = DBI->connect("dbi:Pg:dbname=$db_schema;host=$db_host");
+my %terms = ();
+
+say "Reading OBO...";
+my $parser = OBO::Parser::OBOParser->new;
+my $obo = $parser->work($path);
+
+
+say "Loading terms and synonyms...";
+my $stmt = $db->prepare("INSERT INTO ontology (namespace, description) VALUES (?,?) RETURNING id");
+my $cursor = $stmt->execute($ontology_namespace, $ontology_description);
+my $ontology_id = $db->last_insert_id(undef, undef, "ontology", undef);
+$stmt->finish;
+
+my $stmt = $db->prepare("INSERT INTO term (ontology_id, accession, name) VALUES (?,?,?) RETURNING id");
+foreach my $term (@{$obo->get_terms()}) {
+    #say $term->id();
+    if ($term->name() eq "") {
+        next;
+    }
+    my $cursor = $stmt->execute($ontology_id, $term->id(), $term->name());
+    my $term_id = $db->last_insert_id(undef, undef, "term", undef);
+    $terms{$term->id()} = $term_id;
+    foreach my $s ($term->synonym_set()) {
+        $db->do("INSERT INTO synonym (term_id, synonym) VALUES (?,?)", 
+                undef, $term_id, $s->def()->text());
+    }
+}
+$stmt->finish;
+
+say "Loading relationships...";
+foreach my $rel (@{$obo->get_relationships()}) {
+    # FIXME: (?) Term ID for is_a and part_of hardcoded
+    if ($rel->type() eq "is_a") {
+        $db->do("INSERT INTO term_relation (agent, target, relation) VALUES (?,?,0)", undef, $terms{$rel->head()->id}, $terms{$rel->tail()->id});
+    } elsif ($rel->type() eq "part_of") {
+        $db->do("INSERT INTO term_relation (agent, target, relation) VALUES (?,?,1)", undef, $terms{$rel->head()->id}, $terms{$rel->tail()->id});
+    }
+}
+$db->disconnect();

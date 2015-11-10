@@ -1,0 +1,15 @@
+#!/bin/bash
+
+# Fill a VW template
+# $1 - the template
+# $2 - a file containing the positively labeled IDs, one per line
+
+[ $# != 2 ] && {
+    echo "USAGE: $0 <template> <positive ID file>" 1>&2
+    exit 1
+}
+
+paste -d" " \
+    <(join -a 1 -o 1.1 2.1 <(cut -f1 $1) <(sort -k1b,1 $2) \
+        | awk 'NF==1 { print "-1 |f" } NF==2 { print "1 |f" }') \
+    <(cut -f2- $1)

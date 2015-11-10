@@ -1,0 +1,13 @@
+#!/usr/bin/env bash
+
+echo "Not implemented."
+exit 1
+
+TAXON_ID="$1"
+ASSEMBLY_NAME="$2"
+CONTIG_SIZES="$3"
+
+gfadq -e "INSERT INTO assembly (taxon_id, name) VALUES ($TAXON_ID, '$ASSEMBLY_NAME');"
+ID=$(gfadq -ANe "SELECT id FROM assembly WHERE name='$ASSEMBLY_NAME'")
+awk -vid=$ID '{print "null\t"id"\t"$0}' $CONTIG_SIZES \
+    | gfadq -e "LOAD DATA LOCAL INFILE '/dev/stdin' INTO TABLE contig"

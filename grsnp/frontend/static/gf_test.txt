@@ -1,0 +1,10 @@
+../../genome_runner/genome_runner/released/hg19/regulation/Tier1/wgEncodeHaibMethylRrbsOvcar3UwSitesRep2.gz
+../../genome_runner/genome_runner/released/hg19/regulation/Tier1/wgEncodeHaibMethylRrbsHreUwSitesRep2.gz
+../../genome_runner/genome_runner/released/hg19/regulation/Tier1/wgEncodeUwDnaseHpafHotspotsRep1.gz
+../../genome_runner/genome_runner/released/hg19/regulation/Tier1/wgEncodeHaibMethylRrbsBcstomach0111002BiochainSitesRep1.gz
+../../genome_runner/genome_runner/released/hg19/regulation/Tier1/wgEncodeHaibMethylRrbsLncapDukeSitesRep2.gz
+../../genome_runner/genome_runner/released/hg19/regulation/Tier1/wgEncodeUwDnaseMcf7Estctrl0hHotspotsRep2.gz
+../../genome_runner/genome_runner/released/hg19/regulation/Tier1/wgEncodeHaibMethylRrbsGm19240DukeSitesRep2.gz
+../../genome_runner/genome_runner/released/hg19/regulation/Tier1/wgEncodeUwDnaseBe2cHotspotsRep1.gz
+../../genome_runner/genome_runner/released/hg19/regulation/Tier1/wgEncodeHaibMethylRrbsMcf7CtcfshrnaDukeSitesRep2.gz
+../../genome_runner/genome_runner/released/hg19/regulation/Tier1/wgEncodeHaibMethylRrbsBcpancreash12817nBiochainSitesRep2.gz

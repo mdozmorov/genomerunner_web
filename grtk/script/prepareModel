@@ -1,0 +1,47 @@
+#!/bin/bash
+
+usage() {
+    cat<<EOF
+Initialize a function prediction model.
+USAGE: $0 [options] -m <model prefix> -r <BED file> <BigWig file> ...
+
+Options:
+    Currently none.
+
+Note: All regions in the BED file must have a unique name.
+EOF
+}
+
+while getopts m:r: opt; do
+    case $opt in
+        m) prefix=$OPTARG ;;
+        r) regions=$OPTARG ;;    
+        *) usage && exit 1
+    esac
+done
+
+shift $((OPTIND - 1))
+
+[ -z "$prefix" ] || [ -z "$regions" ] && {
+    usage
+    exit 1
+}
+
+[ -e "${prefix}.regions" ] && {
+    echo "ERROR: A model with this prefix already exists."
+    exit 1
+}
+
+mkdir -p $(dirname $prefix)
+
+[ -z $( cut -f4 $regions | sort | uniq -d ) ] || {
+    echo "ERROR: Regions file (-r) has a duplicate name field."
+    exit 1
+}
+
+sort -k4b,4 $regions > ${prefix}.regions
+for file in "$@"; do
+    echo $( realpath $file ) >> ${prefix}.predictors
+done
+
+bigWigCount ${prefix}.regions "$@" | transpose | mat2vw > ${prefix}.template

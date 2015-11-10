@@ -1,0 +1,75 @@
+#!/usr/bin/env python
+"""
+Given one or two matrices, calculate a distance metric
+between each pair of rows.
+
+The default output format is as follows:
+- one tab-delimited line per column in the first ("X") matrix
+- the first element in the line is the "X" column ID
+- the remaining N elements (modifiable by the -n switch) 
+  are the N columns in "Y" which have the smallest distance 
+  to the current column in "X"
+
+Alternatively, the -m flag will allow the complete distance matrix
+to be output.
+
+The default metric is Pearson distance.
+"""
+import argparse
+import sys
+
+from grtk.io import read_matrix
+
+import numpy
+import pandas
+
+standardize = lambda X: X.apply(lambda x: (x - x.mean()) / x.std(), axis=1)
+
+def pearson_distance(X, Y):
+    # Calculate the distance matrix
+    n = len(X.columns) - 1
+    D = 1 - (numpy.dot(standardize(X), standardize(Y).T) / n)
+    return pandas.DataFrame(D, index=X.index, columns=Y.index)
+
+def main(argv):
+    parser = argparse.ArgumentParser(
+            description=sys.modules[__name__].__doc__,
+            formatter_class=argparse.RawDescriptionHelpFormatter)
+    parser.add_argument("-x", type=argparse.FileType("r"),
+            help="The first matrix.", required=True)
+    parser.add_argument("-y", type=argparse.FileType("r"),
+            help="The second matrix (optional). If this is not provided, X will \
+            be compared against itself.")
+    parser.add_argument("--output_matrix", '-m', action="store_true",
+            default=False,
+            help="Output the entire distance matrix.")
+    parser.add_argument("-n", type=int, default=50,
+        help="Number of top correlated transcripts to print.")
+    args = parser.parse_args(argv)
+
+    X = read_matrix(args.x)
+    Y = read_matrix(args.y) if args.y else X
+
+    if not numpy.array(X.columns == Y.columns).all():
+        raise Exception("All column IDs must match.")
+    else:
+        shared_cols = list(set(X.columns) & set(Y.columns))
+        if not shared_cols:
+            raise Exception("No columns are shared between the matrices!")
+        X = X.ix[:,shared_cols]
+        Y = Y.ix[:,shared_cols]
+
+    # Calculate the distance
+    D = pearson_distance(X, Y)
+
+    # Output the results
+    if args.output_matrix:
+        D.to_csv(sys.stdout, float_format="%0.3f", sep="\t")
+    else:
+        D[numpy.isnan(D)] = numpy.inf
+        for i,rn in enumerate(X.index):
+            print(rn,*(Y.index[j] for j in \
+                    D.ix[i,:].argsort()[:args.n]), sep="\t")
+
+if __name__ == "__main__":
+    main(sys.argv[1:])
