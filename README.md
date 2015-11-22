@@ -48,6 +48,6 @@ The logic here is that the first `find` command finds top folders containing cat
 
 The analysis can be run as, e.g.,
 ```bash
-gr -g hg19 -d /path/to/database -r /path/to/results/folder --pv_adjust None -a fois.txt gf_encTfbs.txt /path/to/background.bed 
+gr -g hg19 -d /path/to/database -r /path/to/results/folder -a fois.txt gf_encTfbs.txt /path/to/background.bed 
 ```
-The optional "--pv_adjust" argument specify type of multiple testing correction, the optional "-a" argument specify if annotation analysis should be run.
+The optional "-a" argument specify if annotation analysis should be run.
