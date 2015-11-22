@@ -21,3 +21,33 @@ will install all required packages. See the main documentation on
 
 Use `R.GenomeRunner` to set up Shiny server, see [tips](https://github.com/mdozmorov/genome_runner/tree/shiny/web)
 
+# Starting the server
+
+```bash
+gr-server -g hg19 -d /path/to/database/ -r /path/to/database/ -w 1 -p 8080
+```
+The "-g" argument specifies organism, the "-d" argument specifies path to the database of genome annotation data, the "-r" argument specifies path to the folder to output results, the optional "-w" argument specifies number of workers to run parallel jobs, the optional "-p" argument specifies at which port to start the server. Access the server locally at "http://localhost:8080"
+
+# Command line usage
+
+Prerequisites:
+- Database of genome annotations, created with `gr-dbcreator`. Use full path. Example: /home/genomerunner/db_5.00_07-22-2015;
+- Text file with full path(s) to BED file(s) containing genomic coordinates of SNPs of interest. Example: "foi.txt", where each line contains paths to BED files;
+- Text file with full paths to genome annotation BED files. Example: "gf_encTfbs.txt", where each line contains paths to TFBS genome annotation BED files;
+- The "background" file, a BED file containing genomic coordinates of all SNPs. This file is used to estimate enrichments that can happen by chance. The SNPs of interest should be a subset of this file.
+
+The files containing categories of genome annotations can be created with
+```bash
+DIR=/home/genomerunner/db_5.00_07-22-2015
+for file in `find $DIR/grsnp_db/hg19/ENCODE -maxdepth 1 -mindepth 1 -type d`; do
+	gf=`basename $file`; echo $gf;
+	find `$file -type f -name "*.bed.gz"` | sort > gf_enc$gf.txt;
+done
+```
+The logic here is that the first `find` command finds top folders containing categories of genomic annotation data. The second `find` command outputs paths for each genome annotation data file into a category-specific file name, e.g., `gf_encTfbs.txt`.
+
+The analysis can be run as, e.g.,
+```bash
+gr -g hg19 -d /path/to/database -r /path/to/results/folder --pv_adjust None -a fois.txt gf_encTfbs.txt /path/to/background.bed 
+```
+The optional "--pv_adjust" argument specify type of multiple testing correction, the optional "-a" argument specify if annotation analysis should be run.
