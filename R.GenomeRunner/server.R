@@ -3,13 +3,13 @@ library(shinyBS)
 library(dplyr)
 #shiny::runApp(host='0.0.0.0',port=4494)
 
-#results.dir <- "/home/lukas/db_5.00_06-10-2015/results/test"
+# results.dir <- "/home/lukas/db_5.00_06-10-2015/results/test"
 # Mikhail paths
 results.dir <- "/home/mdozmorov/db_5.00_07-22-2015/results/"
-#results.dir <- "/Users/mikhail/Documents/Work/VCU_work/Coleen/Breast_cancer/data/Tim/grweb_DMR-global-hyperhypo_vs_encTFBS_cellspecific_bkgalldmrs/"
-#results.dir <- "/Users/mikhail/Documents/Work/GenomeRunner/gwas2bed/autoimmune/R.GR.autoimmune/data.gr.05/grweb_roadmapChrom25/"
-results.dir <- "/Users/mikhail/Documents/Work/WorkOMRF/Dennis/data.1/gr_T2over100_T3-T1_rdmHistone_bPk_processed/"
-genomerunner.mode <- F
+# results.dir <- "/Users/mikhail/Documents/tmp/results/diseases_vs_rdmHistone_gPk-imputed/"
+# results.dir <- "/Users/mikhail/Documents/tmp/results/example2/"
+
+genomerunner.mode <- T
 coloring.num = 50
 num.char <- 50
 
@@ -131,7 +131,7 @@ get.enrichment.table <- reactive({
   selectedFOI <- input$cmbFOI
   if (input$cmbMatrix == "matrix_PVAL.txt") {
     mtx.adjust <- apply(mtx[selectedFOI], 2, 
-                        function(x) p.adjust(abs(x), method = input$cmbPvalAdjustMethod))
+                        function(x) p.adjust(abs(x), method = input$cmbPvalAdjustMethod)) %>% as.matrix(drop = F)
     pval.sig <- rep("Not significant", nrow(mtx.adjust))
     pval.sig[mtx[, selectedFOI] < 0.05 & mtx[, selectedFOI] > 0] <- "Overrepresented"
     pval.sig[mtx[, selectedFOI] > -0.05 & mtx[, selectedFOI] < 0] <- "Underrepresented"
@@ -529,7 +529,7 @@ output$pltDend <- renderPlot({
 get.gr_cellspecific <- reactive({
   withProgress({
     mtx <- gr_load_data(paste(get.results.dir(), "matrix_PVAL.txt", sep = ""))
-    mtx.CTE <- gr_cellspecific(mtx)
+    mtx.CTE <- gr_cellspecific(mtx, cutoff.pval = 0.05)
   }, message = "Loading table", value = 1)
 })
 
@@ -582,14 +582,14 @@ output$downloadCTEnrichment <- downloadHandler(filename = function() {
 output$downloadEnrichHeatmap <- downloadHandler(filename = function() {
   return("EnrichmentHeatmap.pdf")
 }, content = function(file) {
-  pdf(file = file, width = 10, height = 10)
+  pdf(file = file)
   par(mfrow = c(3, 3))
   if (input$cmbMatrix == "matrix_PVAL.txt") {
     mtx <- get.adjust.matrix()
   } else {
     mtx <- get.matrix()
   }
-  n_limit = 20
+  n_limit = 30
   # if n > 100, calculate SD for each row.
   if (nrow(mtx) > n_limit) {
     # calculate SD for each row.
@@ -600,6 +600,7 @@ output$downloadEnrichHeatmap <- downloadHandler(filename = function() {
     mtx.sd.order <- mtx.sd.order[1:n_limit, ]
     mtx <- mtx.sd.order
   }
+  pdf(file = file, width = 0.25*ncol(mtx)+5, height = 0.25*nrow(mtx)+5)
   par(cex.main = 0.65, oma = c(2, 0, 0, 5), mar = c(5, 4.1, 4.1, 5))  # Adjust margins
   gplots::heatmap.2(as.matrix(mtx), hclust = function(tmp) {
     hclust(tmp, method = input$cmbClustMethod)
@@ -618,6 +619,7 @@ output$downloadEpisimHeatmap <- downloadHandler(filename = function() {
   validate(need(ncol(mat) > 2, "Need at least 3 SNPs of interest files to perform clustering."))
   validate(need(nrow(mat) > 4, "Need at least 5 genome features to perform clustering."))
   cor.mat <- get.corr.matrix()
+  pdf(file = file, width = 0.25*ncol(cor.mat)+5, height = 0.25*nrow(cor.mat)+5)
   hclustergram <- get.cor.hclust.dendrogram()
   par(cex.main = 0.65, oma = c(2, 0, 0, 5), mar = c(5, 4.1, 4.1, 5))  # Adjust margins
   coloring <- colorRampPalette(c("blue", "yellow", "red"))
@@ -717,7 +719,7 @@ output$downloadZIP <- downloadHandler(filename = function() {
 }, content = function(file) {
   # ensure correlation matrix is created
   mtx <- get.matrix()
-  if (ncol(mtx) > 1 & nrow(mtx) > 1) {
+  if (ncol(mtx) > 1 & nrow(mtx) > 4) {
     get.corr.matrix()
   }
   # Append gfAnnot columns to the end of the PVAL and OR matrix

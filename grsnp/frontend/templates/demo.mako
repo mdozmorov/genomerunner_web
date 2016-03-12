@@ -25,5 +25,7 @@
 			<li style="line-height: 1.15; margin-top: 0pt; margin-bottom: 0pt;">
 				<span style="font-family:arial,helvetica,sans-serif;"><span style="white-space: pre-wrap; line-height: 1.15;">Hit &quot;Submit job&quot; - the analysis should take a minute. The results should look like <a href="http://www.integrativegenomics.org/results_shiny?id=example2">http://www.integrativegenomics.org/results_shiny?id=example2</a></span></span></li>
 		</ol>
-		<br>
-			<span style="font-family:arial,helvetica,sans-serif;">To get more individual disease- or trait-specific sets of SNPs, explore <a href="https://github.com/mdozmorov/gwas2bed" target="_blank">https://github.com/mdozmorov/gwas2bed</a> repository.</span></p>
+        <br>
+                <span style="font-family:arial,helvetica,sans-serif;">To get more individual disease- or trait-specific sets of SNPs, to be uploaded in Step 1, explore <a href="https://github.com/mdozmorov/gwas2bed" target="_blank">https://github.com/mdozmorov/gwas2bed</a> repository. See BED file example <a href="https://github.com/mdozmorov/gwas2bed/blob/master/gwasCatalog/bed/more15/systemic_lupus_erythematosus.bed" target="_blank">systemic_lupus_erythematosus.bed</a></span></p>
+        <br>
+                <span style="font-family:arial,helvetica,sans-serif;">To get more regulatory/epigenomic datasets, to be uploaded in Step 3, advanced features, explore <a href="https://github.com/mdozmorov/gwas2bed/tree/master/trynka-raychaudhuri" target="_blank">https://github.com/mdozmorov/gwas2bed/tree/master/trynka-raychaudhuri</a> repository. See BED file example <a href="https://github.com/mdozmorov/gwas2bed/blob/master/trynka-raychaudhuri/H3K4me3_CD34_Cultured_Cells.bed" target="-blank">H3K4me3_CD34_Cultured_Cells.bed</a></span></p>

@@ -51,3 +51,5 @@ The analysis can be run as, e.g.,
 gr -g hg19 -d /path/to/database -r /path/to/results/folder -a fois.txt gf_encTfbs.txt /path/to/background.bed 
 ```
 The optional "-a" argument specify if annotation analysis should be run.
+
+This release is manually sunchronized with [the developmental branch](https://github.com/mdozmorov/genome_runner/tree/shiny) of GenomeRunner using `clear; diff -r --brief  genome_runner/ genomerunner_web/ | grep differ | grep -v .git | sort` and `clear; diff -r --brief  R.GenomeRunner/ genomerunner_web/R.GenomeRunner/ | grep differ | grep -v .git | sort`

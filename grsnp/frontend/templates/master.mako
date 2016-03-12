@@ -80,7 +80,7 @@
 				</a>
 				<ul class="pull-right">
 					<li><a href="./overview">Overview</a></li>
-					<li><a href="./news">News</a></li>
+					<!--<li><a href="./news">News</a></li>-->
 					<li><a href="./demo">Quick start</a></li>
 					<!-- <li><a href="./cite">How to Cite</a></li>
 					<li><a href="http://sourceforge.net/projects/genomerunner/">GenomeRunner on SourceForge</a></li>

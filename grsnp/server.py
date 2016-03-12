@@ -105,7 +105,7 @@ class WebUI(object):
 
 	@cherrypy.expose
 	def query(self, bed_file=None,bed_data=None, background_file=None,background_data=None, 
-				genomicfeature_file=None, niter=10, name="", strand="",run_annotation=False, default_background = "",db_version=None,jstree_gfs="",**kwargs):
+				genomicfeature_file=None, niter=10, name="", strand="",run_annotation=False, default_background = "",db_version=None,jstree_gfs="",stat_test=None,num_mc = None,**kwargs):
 		global results_dir, uploads_dir, sett
 		# Assign a random id
 		id = ''.join(random.choice(string.lowercase+string.digits) for _ in range(32))
@@ -321,6 +321,9 @@ class WebUI(object):
 				writer.write(list_foi)
 		b = b.replace(data_dir,'').replace(os.path.split(uploads_dir)[0],"").lstrip("/")
 
+		if stat_test == "montecarlo":
+			stat_test = "montecarlo_"+num_mc
+
 		# write the enrichment settings.
 		path = os.path.join(res_dir, ".settings")
 		set_info = {"Jobname:": str(id),
@@ -329,7 +332,8 @@ class WebUI(object):
 					"Organism:": organism,
 					"Database version:":db_version,
 					"% Score threshold:": str(kwargs['pct_score'])+"%",
-					"Strand:": strand}
+					"Strand:": strand,
+					"P-value statistical test:": stat_test}
 
 		with open(path, 'wb') as sett_files:
 			for k,v in set_info.iteritems():
@@ -362,7 +366,7 @@ class WebUI(object):
 		#														  queue='short_runs')
 		
 		try:
-			grsnp.worker_hypergeom4.run_hypergeom.delay(fois,gfs,b,id,True,os.path.join(sett["data_dir"][db_version],organism,"bkg_overlaps.gr"),run_annotation,run_random,pct_score=kwargs['pct_score'],organism=organism,id=id,db_version=db_version)
+			grsnp.worker_hypergeom4.run_hypergeom.delay(fois,gfs,b,id,True,os.path.join(sett["data_dir"][db_version],organism,"bkg_overlaps.gr"),run_annotation,run_random,pct_score=kwargs['pct_score'],organism=organism,id=id,db_version=db_version,stat_test = stat_test)
 		except Exception, e:
 			print "WORKER ERROR"
 		raise cherrypy.HTTPRedirect("result?id=%s" % id)

@@ -31,6 +31,18 @@ function page_reload(){
 
 $(document).ready(function() {	
 
+	$("[name='stat_test']").on('change', function() {	 
+	  if (this.value == "montecarlo"){
+	  	$("#lbl_num_mc").css("visibility", "visible");
+	  	$("[name='num_mc']").css("visibility", "visible");
+		$("#tooltip_mc").css("visibility", "visible");
+	  }
+	  else {
+	  	$("[name='num_mc']").css("visibility", "hidden");
+	  	$("#lbl_num_mc").css("visibility", "hidden");
+		$("#tooltip_mc").css("visibility", "hidden");
+	  }
+	});
 
 	$("#descriptions").click(function(){
 		var organism = $("#org").val().split(":")[1];
@@ -40,7 +52,95 @@ $(document).ready(function() {
 
 	$( "#db_version" ).change(function() {page_reload();});
 
+	// This code runs on form submission
+	// Ensures that FOI and GF were selected/uploaded
+	// Attaches checkboxtree selected items to the form
+	// Ensure that the counts of GF and FOI are reasonable
 	$( "#frmQuery" ).submit(function( event ) {
+
+		// Check if FOI textbox is active
+		var text_foi_exists = typeof( $("#inputbeddata").attr('disabled') ) == 'undefined'
+		// Check if FOI uploaded/selected
+		if ($("#inputbedfile")[0].files.length == 0 
+			&& $('#btngroup_demo_fois .btn.active').html() == "None"
+			&& text_foi_exists == false) {
+			alert("No SNP set files were uploaded/selected. Please upload/selet SNP set files.")
+			return false;
+		} 
+
+		// remove old attached checkboxtree results if they exist
+	     $("#frmQuery").children().remove("[name='jstree_gfs']");
+		// Gather the checkbox tree results and attach to the submitted form
+		var checkbox_input = $("<input>")
+	               .attr("type", "hidden")
+	               .attr("name", "jstree_gfs").val($('#jstree_gfs').jstree('get_selected'));
+
+	    // add checkbox tree results to form
+		$('#frmQuery').append($(checkbox_input));
+		$("#upmessage").css("visibility","visible");		
+		// count the number of GFs selected in the checkboxtree
+		var checkboxtree_gf_count = jQuery.grep(checkbox_input.val().split(","), function( n, i ) {
+			  return (n.startsWith("file:") );
+			}).length;
+
+		// Check if GF uploaded/selected
+		// Get all checked custom GF groups are checked
+		var checked_custom_gfs = $("[name^='grouprun:']:checked");
+		var checked_custom_gf_id = []
+		for (var i = checked_custom_gfs.length - 1; i >= 0; i--) {
+			checked_custom_gf_id.push($(checked_custom_gfs[i]).attr('id'))
+		};
+		var checked_custom_gf_count = 0;
+		// count number of GF in each checked custom GF group
+		for (var i = checked_custom_gf_id.length - 1; i >= 0; i--) {
+			checked_custom_gf_count += $("#grouprun_" + checked_custom_gf_id[i]).attr('title').split('\n').length - 1;
+		};
+		// Count number of uploaded GF files
+		var gf_file_count = $("#inputgenomicfeaturefile")[0].files.length;
+		var total_gf_count = gf_file_count + checkboxtree_gf_count + checked_custom_gf_count;
+		if (total_gf_count == 0){
+			alert("No regulatory datasets were uploaded/selected. Please upload/select regulatory datasets")
+			return false;
+		}
+  
+		var demo_foi_count = $('#btngroup_demo_fois .btn.active').attr('title').split("\n").length - 1;
+		var total_foi_count = $("#inputbedfile")[0].files.length + demo_foi_count;
+		var max_gf_montecarlo = 200;
+		var max_foi_montecarlo = 5;
+		var max_gf_other = 1000;
+		var max_foi_other = 5;
+
+		//console.log("total_gf_count: " + total_gf_count.toString())
+		//console.log("checkboxtree_count: " + checkboxtree_gf_count.toString())
+		//console.log("uploaded GF: " + gf_file_count.toString())
+		//console.log("custom GF: " + checked_custom_gf_count.toString())
+		//return false;
+
+		// check if monte carlo is selected
+		if ($("[name=stat_test] option:selected").val() == "montecarlo") {
+			// Check number of FOI uploaded/selected
+			if (total_foi_count > max_foi_montecarlo) {
+				alert("A total of " + total_foi_count + " SNP set files are uploaded/selected (Maximum " + max_foi_montecarlo + " allowed). Please analyze less SNP set files.")
+				return false;
+			} 
+			// check if more than max_gf_sel number of genomic features selected in checkboxtree		
+			if (total_gf_count > max_gf_montecarlo) {
+				alert("A total of " + total_gf_count + " regulatory datasets are uploaded/selected (Maximum " + max_gf_montecarlo + " allowed). Please, use less regulatory datasets for analysis.")
+				return false;
+			}
+		}
+		else if (($("[name=stat_test] option:selected").val() == "chisquare") || ($("[name=stat_test] option:selected").val() == "binomial")) {
+			// Check if FOI and GF number reasonable for other test types
+			if (total_foi_count > max_foi_other) {
+				alert("A total of " + total_foi_count + " SNP set files are uploaded/selected (Maximum " + max_foi_other + " allowed). Please analyze less SNP set files.")
+				return false;
+			}
+			if (total_gf_count > max_gf_other){
+				alert("A total of " + total_gf_count + " regulatory datasets are uploaded/selected (Maximum "+ max_gf_other + " allowed). Please, use less regulatory datasets for analysis.")
+				return false;
+			}
+		}
+
 		$("#modal_upload").modal()
 	});
 
@@ -164,15 +264,6 @@ $(document).ready(function() {
 		$.each($('.jstree-search'), function(i,val){ $('#jstree_gfs').jstree('deselect_node','#'+val.id) })		
 	}
 
-
-
-	function submit_job(){
-		var input = $("<input>")
-	               .attr("type", "hidden")
-	               .attr("name", "jstree_gfs").val($('#jstree_gfs').jstree('get_selected'));
-		$('#frmQuery').append($(input));
-		$("#upmessage").css("visibility","visible");
-	}
 	
 	//prevents user from submitting form by accidentally pressing the enter key
 	function stopRKey(evt) { 

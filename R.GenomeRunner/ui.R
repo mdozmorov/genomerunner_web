@@ -28,4 +28,6 @@ shinyUI(
         uiOutput("mainpage")
       )
     )
+ ,
+  HTML("<script  type='text/javascript'>var False = false, True = true</script>")
 ))
