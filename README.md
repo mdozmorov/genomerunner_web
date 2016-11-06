@@ -1,3 +1,5 @@
+**Note**: This repository is a frozen snapshot of the software version published in Bioinformatics (doi: 10.1093/bioinformatics/btw169)[http://bioinformatics.oxfordjournals.org/content/32/15/2256.long]. For the latest developmental version, see [https://github.com/mdozmorov/genome_runner/tree/shiny](https://github.com/mdozmorov/genome_runner/tree/shiny)
+
 # GenomeRunner web server
 
 [GenomeRunner web](http://www.intergarivegenomics.org/) is a tool for investigation of potential functional impact of sets of single nucleotide polymorphisms (SNPs) by considering their co-localization with fgenome annotation data (regulatory datasets). The philosophy behind GenomeRunner is that SNPs are not acting in isolation and may collectively alter regulatory/epigenomic features. Finding which regulatory features are affected may help to understand mechanisms of complex diseases from a holistic perspective.
